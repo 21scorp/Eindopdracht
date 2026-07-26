@@ -1,0 +1,576 @@
+/*
+ * AEGIS design system.
+ *
+ * The whole UI is built from four ideas:
+ *   1. Surfaces are near-black and cool. Colour is *light*, never paint.
+ *   2. Every panel has a hairline edge and an inner top highlight, so it reads
+ *      as a physical pane of glass rather than a coloured rectangle.
+ *   3. One accent per screen. Rarity colours are the only exception.
+ *   4. Type is tight, uppercase and letter-spaced for labels; generous and
+ *      readable for prose. Numbers are always tabular.
+ */
+
+@import '@fontsource-variable/inter';
+@import '@fontsource/chakra-petch/400.css';
+@import '@fontsource/chakra-petch/500.css';
+@import '@fontsource/chakra-petch/600.css';
+@import '@fontsource/chakra-petch/700.css';
+
+:root {
+  /* Surfaces */
+  --void: #04050b;
+  --abyss: #070a14;
+  --deep: #0b1020;
+  --panel: #111729;
+  --panel-hi: #1a2138;
+  --line: #26304c;
+  --line-soft: #1b2338;
+
+  /* Text */
+  --text: #eaf0ff;
+  --text-dim: #93a0be;
+  --text-faint: #5c6885;
+
+  /* Accents */
+  --aegis: #4de1ff;
+  --nexus: #b9e9ff;
+  --threat: #ff4d6d;
+  --parry: #ffe66d;
+  --overdrive: #ffb020;
+  --ultimate: #c86bff;
+  --heal: #5cffae;
+
+  /* Rarity */
+  --common: #8a94a6;
+  --rare: #3fa9ff;
+  --epic: #a45cff;
+  --legendary: #ffb020;
+  --mythic: #ff3d6e;
+
+  /* The current screen's accent. Screens override this. */
+  --accent: var(--aegis);
+
+  /* Type */
+  --font-display: 'Chakra Petch', 'Rajdhani', 'DIN Alternate', system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Rhythm */
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+
+  /* Safe areas — read by the canvas HUD too. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--void);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.ui-root {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  /*
+   * `minmax(0, 1fr)` rather than the default `auto`: a grid track sized to
+   * `auto` refuses to shrink below its content's min-content width, which lets
+   * one long header row push the entire screen wider than the viewport.
+   */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.noscript {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text);
+  background: var(--void);
+  z-index: 100;
+}
+
+/* ------------------------------------------------------------------ screens */
+
+.screen {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  pointer-events: auto;
+  padding: calc(var(--safe-top) + 18px) calc(var(--safe-right) + 18px) calc(var(--safe-bottom) + 18px)
+    calc(var(--safe-left) + 18px);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 320ms var(--ease-out),
+    visibility 0s linear 320ms;
+  transform: translateY(14px) scale(0.995);
+  will-change: opacity, transform;
+}
+
+.screen.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 380ms var(--ease-out),
+    visibility 0s;
+}
+
+/* A screen that lets the arena show through behind it. */
+.screen--overlay {
+  background: radial-gradient(120% 90% at 50% 0%, rgba(8, 12, 24, 0.72) 0%, rgba(4, 5, 11, 0.94) 62%);
+  backdrop-filter: blur(14px) saturate(115%);
+  -webkit-backdrop-filter: blur(14px) saturate(115%);
+}
+
+/* A screen that fully owns the viewport. */
+.screen--solid {
+  background:
+    radial-gradient(90% 60% at 50% -10%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 60%),
+    linear-gradient(180deg, var(--abyss) 0%, var(--void) 100%);
+}
+
+.screen--passthrough {
+  pointer-events: none;
+}
+.screen--passthrough > * {
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------- typography */
+
+.h-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(28px, 8vw, 46px);
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.h-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(20px, 5.2vw, 28px);
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.h-section {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.t-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.t-body {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+
+.t-num {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.t-accent {
+  color: var(--accent);
+}
+
+/* ------------------------------------------------------------------ panels */
+
+.panel {
+  position: relative;
+  background: linear-gradient(180deg, rgba(26, 33, 56, 0.72) 0%, rgba(11, 16, 32, 0.86) 100%);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+/* The top highlight that sells the "glass pane" read. */
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  pointer-events: none;
+}
+
+.panel--accent {
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 10%, transparent),
+    0 18px 50px -22px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* ----------------------------------------------------------------- buttons */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 22px;
+  min-height: 50px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: linear-gradient(180deg, rgba(30, 38, 62, 0.9), rgba(14, 19, 36, 0.9));
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform 140ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out),
+    filter 180ms var(--ease-out);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+}
+
+.btn:active {
+  transform: scale(0.975);
+  filter: brightness(1.12);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.btn[disabled],
+.btn.is-disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn--primary {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 28%, rgba(20, 27, 48, 0.95)),
+    color-mix(in srgb, var(--accent) 10%, rgba(10, 14, 28, 0.95))
+  );
+  color: #fff;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 14px 38px -16px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+
+.btn--hero {
+  min-height: 64px;
+  font-size: 17px;
+  letter-spacing: 0.2em;
+  border-radius: var(--r-lg);
+}
+
+.btn--ghost {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--line-soft);
+  color: var(--text-dim);
+}
+
+.btn--danger {
+  --accent: var(--threat);
+}
+
+.btn--icon {
+  min-height: 44px;
+  width: 44px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.btn__sub {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  opacity: 0.72;
+  font-weight: 500;
+}
+
+/* A slow shine that crosses primary buttons; makes the UI feel alive. */
+.btn--primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  transform: skewX(-18deg);
+  animation: shine 4.5s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+
+@keyframes shine {
+  0%,
+  62% {
+    left: -60%;
+  }
+  88%,
+  100% {
+    left: 130%;
+  }
+}
+
+/* -------------------------------------------------------------- currencies */
+
+.wallet {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-width: 0;
+}
+
+.currency {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 6px 11px 6px 7px;
+  border-radius: 999px;
+  background: rgba(9, 13, 26, 0.72);
+  border: 1px solid var(--line-soft);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.currency__icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  image-rendering: auto;
+}
+
+.currency__value {
+  min-width: 1ch;
+}
+
+.currency--gain {
+  animation: currency-gain 520ms var(--ease-pop);
+}
+
+@keyframes currency-gain {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.16);
+    filter: brightness(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ------------------------------------------------------------------ rarity */
+
+[data-rarity='common'] {
+  --rarity: var(--common);
+}
+[data-rarity='rare'] {
+  --rarity: var(--rare);
+}
+[data-rarity='epic'] {
+  --rarity: var(--epic);
+}
+[data-rarity='legendary'] {
+  --rarity: var(--legendary);
+}
+[data-rarity='mythic'] {
+  --rarity: var(--mythic);
+}
+
+.rarity-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rarity, var(--accent));
+  background: color-mix(in srgb, var(--rarity, var(--accent)) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--rarity, var(--accent)) 45%, transparent);
+}
+
+/* -------------------------------------------------------------------- misc */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.row > * {
+  min-width: 0;
+}
+.row--between {
+  justify-content: space-between;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.grow {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+.scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.stack-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line), transparent);
+  border: 0;
+}
+
+.meter {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
+  transition: width 420ms var(--ease-out);
+}
+
+/* Respect the system setting. Motion is decoration here, never information. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

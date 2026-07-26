@@ -1,0 +1,75 @@
+/**
+ * Entry point.
+ *
+ * Wires the canvas and the UI root into the app, registers every screen, then
+ * hands control to the loop. Anything that can fail at boot fails loudly here
+ * rather than leaving a black rectangle on screen.
+ */
+
+import './styles/global.css';
+import './styles/screens.css';
+
+import { App } from './app/App';
+import { HomeScreen } from './ui/screens/HomeScreen';
+import { ResultsScreen } from './ui/screens/ResultsScreen';
+import { PauseScreen } from './ui/screens/PauseScreen';
+import { RosterScreen } from './ui/screens/RosterScreen';
+import { BannerScreen } from './ui/screens/BannerScreen';
+import { ShopScreen } from './ui/screens/ShopScreen';
+import { SettingsScreen } from './ui/screens/SettingsScreen';
+import { ProfileScreen } from './ui/screens/ProfileScreen';
+import { RatesScreen } from './ui/screens/RatesScreen';
+import { PullResultScreen } from './ui/screens/PullResultScreen';
+
+function fail(message: string, err?: unknown): never {
+  console.error(message, err);
+  document.body.innerHTML = `
+    <div style="position:fixed;inset:0;display:grid;place-items:center;padding:32px;text-align:center;
+                font-family:system-ui,sans-serif;color:#EAF0FF;background:#04050B">
+      <div>
+        <h1 style="font-size:20px;margin-bottom:10px">AEGIS could not start</h1>
+        <p style="color:#93A0BE;font-size:14px;max-width:36ch;line-height:1.5">${message}</p>
+      </div>
+    </div>`;
+  throw new Error(message);
+}
+
+async function main(): Promise<void> {
+  const canvas = document.getElementById('game');
+  const uiRoot = document.getElementById('ui');
+  if (!(canvas instanceof HTMLCanvasElement)) fail('The game canvas is missing from the page.');
+  if (!(uiRoot instanceof HTMLElement)) fail('The UI container is missing from the page.');
+
+  let app: App;
+  try {
+    app = new App(canvas, uiRoot);
+  } catch (err) {
+    fail('This browser does not support the 2D canvas features AEGIS needs.', err);
+  }
+
+  app.screens.register(new HomeScreen(app));
+  app.screens.register(new ResultsScreen(app));
+  app.screens.register(new PauseScreen(app));
+  app.screens.register(new RosterScreen(app));
+  app.screens.register(new BannerScreen(app));
+  app.screens.register(new ShopScreen(app));
+  app.screens.register(new SettingsScreen(app));
+  app.screens.register(new ProfileScreen(app));
+  app.screens.register(new RatesScreen(app));
+  app.screens.register(new PullResultScreen(app));
+
+  // Hardware/browser back and Escape both mean "up one level".
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (app.screens.handleBack()) e.preventDefault();
+    }
+  });
+
+  await app.boot();
+  app.showMenu('home');
+
+  // Expose for debugging without shipping a dev overlay.
+  (window as unknown as { aegis: App }).aegis = app;
+}
+
+void main();

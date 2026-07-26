@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#04050B" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <title>AEGIS — Hold the Line</title>
+    <meta
+      name="description"
+      content="One thumb. One shield. Deflect everything. Collect Guardians, chain perfect parries, and see how deep you can hold the line."
+    />
+
+    <!-- Social cards: the share loop depends on these looking right when a run gets posted. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AEGIS — Hold the Line" />
+    <meta property="og:description" content="One thumb. One shield. Deflect everything." />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <!--
+      Two layers, deliberately:
+        #game  canvas   — the arena, HUD and gacha cinematics (shares the bloom pass)
+        #ui    DOM      — menus, shop, roster (real text, real accessibility)
+    -->
+    <canvas id="game" aria-label="AEGIS game arena" role="img"></canvas>
+    <div id="ui" class="ui-root"></div>
+
+    <!-- Channel-isolating filters used by the renderer's chromatic aberration pass. -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="aegis-red" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="1 0 0 0 0
+                    0 0 0 0 0
+                    0 0 0 0 0
+                    0 0 0 1 0"
+          />
+        </filter>
+        <filter id="aegis-cyan" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="0 0 0 0 0
+                    0 1 0 0 0
+                    0 0 1 0 0
+                    0 0 0 1 0"
+          />
+        </filter>
+      </defs>
+    </svg>
+
+    <noscript>
+      <div class="noscript">AEGIS needs JavaScript enabled to run.</div>
+    </noscript>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
