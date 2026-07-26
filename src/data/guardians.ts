@@ -111,7 +111,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Built from the hull of the last evacuation barge. It does not turn quickly because it has never needed to be anywhere else.',
     ultimate: 'bulwark',
     ultimateText: 'BULWARK — the shield wraps a full circle for 5 seconds.',
-    stats: stats({ arc: 1.15, turn: 0.075, integrity: 5, deflectSpeed: 1.3, scoreMult: 0.92 }),
+    stats: stats({ arc: 1.15, turn: 0.075, integrity: 4, deflectSpeed: 1.3, scoreMult: 0.92 }),
   },
   {
     id: 'ember',
@@ -139,7 +139,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Flies the line between contact and catastrophe, and files a report about it afterward.',
     ultimate: 'overcharge',
     ultimateText: 'OVERCHARGE — every contact counts as a perfect parry for 6 seconds.',
-    stats: stats({ arc: 0.72, turn: 0.032, parryWindow: 0.2, deflectSpeed: 1.7, scoreMult: 1.22 }),
+    stats: stats({ arc: 0.72, turn: 0.032, parryWindow: 0.22, deflectSpeed: 1.7, integrity: 4, scoreMult: 1.3 }),
   },
   {
     id: 'halcyon',
@@ -165,7 +165,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Does not destroy incoming ordnance. Redirects it, with interest, toward whatever sent it.',
     ultimate: 'lance',
     ultimateText: 'LANCE — fire a piercing beam along your aim that shreds everything in its path.',
-    stats: stats({ arc: 0.92, deflectSpeed: 2.1, pulseCooldown: 2.8, scoreMult: 1.14 }),
+    stats: stats({ arc: 0.92, deflectSpeed: 2.1, pulseCooldown: 2.5, scoreMult: 1.24 }),
   },
   {
     id: 'vesper',
@@ -206,7 +206,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Small, dense, and entirely uninterested in where anything else intended to go.',
     ultimate: 'magnetize',
     ultimateText: 'MAGNETIZE — pull every threat into one point, then detonate it.',
-    stats: stats({ arc: 0.94, pulseCooldown: 2.3, pulseWindow: 0.34, ultCost: 42, scoreMult: 1.2 }),
+    stats: stats({ arc: 0.94, pulseCooldown: 2.3, pulseWindow: 0.34, ultCost: 38, scoreMult: 1.28 }),
   },
   {
     id: 'zephyr',
@@ -232,7 +232,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Does not aim for the target. Aims for the sequence the target starts.',
     ultimate: 'nova',
     ultimateText: 'NOVA — detonate the nexus outward, destroying every threat on screen.',
-    stats: stats({ arc: 0.86, deflectSpeed: 1.95, parryWindow: 0.14, integrity: 2, scoreMult: 1.34 }),
+    stats: stats({ arc: 0.86, deflectSpeed: 1.95, parryWindow: 0.16, integrity: 3, scoreMult: 1.4 }),
   },
 
   // ------------------------------------------------------------- LEGENDARY --
@@ -289,14 +289,14 @@ export const GUARDIANS: readonly Guardian[] = [
     tagline: 'Enormous integrity and a full-circle Ultimate.',
     lore: 'The longest night on record ended when this thing decided it had.',
     ultimate: 'bulwark',
-    ultimateText: 'BULWARK — the shield wraps a full circle for 9 seconds.',
+    ultimateText: 'BULWARK — the shield wraps a full circle for 7 seconds.',
     stats: stats({
       arc: 1.12,
       turn: 0.034,
       parryWindow: 0.17,
-      integrity: 6,
+      integrity: 5,
       deflectSpeed: 1.8,
-      ultCost: 36,
+      ultCost: 40,
       scoreMult: 1.3,
     }),
   },

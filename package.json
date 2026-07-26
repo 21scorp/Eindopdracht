@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AEGIS — a one-thumb ring-defense arcade game with Guardians, parries and gacha.",
+  "description": "AEGIS \u2014 a one-thumb ring-defense arcade game with Guardians, parries and gacha.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "balance": "vite-node tools/balance.ts",
+    "smoke": "vite build && vite preview --port 4173 --host 127.0.0.1 & sleep 3 && node tools/smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

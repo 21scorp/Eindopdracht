@@ -38,6 +38,8 @@ export interface DirectorHooks {
   spawn(req: SpawnRequest): void;
   /** Live count of threats that still threaten the nexus. */
   incomingCount(): number;
+  /** True while a boss is alive on the field. */
+  bossPresent(): boolean;
   onWaveStart(wave: number, isBoss: boolean): void;
   onWaveClear(wave: number): void;
 }
@@ -56,6 +58,7 @@ export class WaveDirector {
   private spawnTimer = 0;
   private pending: PendingSpawn[] = [];
   private clock = 0;
+  private bossElapsed = 0;
   private rng: Rng;
 
   /** Set true by the session when the boss dies, so the boss phase can end. */
@@ -76,6 +79,7 @@ export class WaveDirector {
     this.spawnTimer = 0;
     this.pending.length = 0;
     this.clock = 0;
+    this.bossElapsed = 0;
     this.bossDefeated = false;
     this.rng = new Rng(`waves-${seed}`);
   }
@@ -129,13 +133,16 @@ export class WaveDirector {
 
       case 'boss':
         this.spawnTimer -= dt;
+        this.bossElapsed += dt;
         if (this.spawnTimer <= 0) {
           // Bosses are accompanied by a light trickle so the player cannot
           // simply park the shield on the boss and wait.
           this.emitPattern(0.55);
           this.spawnTimer = this.spawnInterval() * 1.7;
         }
-        if (this.bossDefeated) {
+        // Belt and braces: the boss phase ends when the boss dies, but if the
+        // boss ever disappears without reporting it, the wave must not hang.
+        if (this.bossDefeated || (this.bossElapsed > 6 && !this.hooks.bossPresent())) {
           this.phase = 'clearing';
         }
         break;
@@ -156,6 +163,7 @@ export class WaveDirector {
   private startWave(): void {
     this.wave++;
     this.bossDefeated = false;
+    this.bossElapsed = 0;
     this.budget = this.budgetFor(this.wave);
     this.spawnTimer = 0.25;
     const boss = this.isBossWave;
@@ -214,12 +222,14 @@ export class WaveDirector {
     const speedMult = this.speedMultiplier * this.rng.range(0.95, 1.06);
 
     const homogeneousDef = pattern.homogeneous ? this.pickThreat(kinds) : null;
+    let spawned = 0;
 
     for (let i = 0; i < pattern.count; i++) {
       const def = homogeneousDef ?? this.pickThreat(kinds);
       const cost = def.cost * pattern.costMult * budgetScale;
       if (this.phase === 'spawning' && this.budget - cost < -0.75) break;
       this.budget -= cost;
+      spawned++;
 
       const t = pattern.count === 1 ? 0 : i / (pattern.count - 1) - 0.5;
       const angle =
@@ -236,6 +246,14 @@ export class WaveDirector {
       });
 
       if (this.phase === 'spawning' && this.budget <= 0) break;
+    }
+
+    // A residual budget smaller than anything the wave can afford would sit
+    // there forever: the pattern keeps being rejected, nothing spawns, and the
+    // wave never reaches `clearing`. Retiring the remainder ends the wave
+    // instead of hanging the run on a rounding error.
+    if (spawned === 0 && this.phase === 'spawning') {
+      this.budget = 0;
     }
   }
 

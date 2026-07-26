@@ -95,32 +95,51 @@ export const SHIELD = {
   forgiveness: 0.045,
 } as const;
 
+/**
+ * The difficulty ramp.
+ *
+ * Tuned against `npm run balance`, which plays hundreds of headless runs with a
+ * scripted bot. The target shape: an average player's run ends somewhere around
+ * wave 8-12 in two to four minutes, they meet a Warden most sessions, and an
+ * expert can push past wave 20 without the game ever becoming unreadable.
+ *
+ * The first pass at these numbers produced ten-minute runs that never ended,
+ * which is fatal for a game whose loop is run -> results -> summon -> run.
+ */
 export const DIFFICULTY = {
   /** Seconds of build-up before the first threat, so the player can orient. */
-  openingCalm: 1.6,
+  openingCalm: 1.8,
   /** Seconds between waves. */
-  waveBreak: 1.5,
-  /** Threat budget for wave n: base + n * growth, with a soft exponential lift. */
-  budgetBase: 3.2,
-  budgetGrowth: 1.35,
-  budgetExponent: 1.14,
+  waveBreak: 1.25,
+  /** Threat budget for wave n: base + n^exponent * growth. */
+  budgetBase: 2.4,
+  budgetGrowth: 2.0,
+  budgetExponent: 1.3,
   /** Global speed multiplier for wave n: 1 + (n-1) * speedGrowth, capped. */
-  speedGrowth: 0.033,
-  speedCap: 2.0,
+  speedGrowth: 0.075,
+  speedCap: 3.0,
   /** Spawn cadence shortens with wave number, floored so it stays readable. */
-  spawnIntervalBase: 0.85,
-  spawnIntervalDecay: 0.965,
-  spawnIntervalFloor: 0.2,
+  spawnIntervalBase: 0.9,
+  spawnIntervalDecay: 0.93,
+  spawnIntervalFloor: 0.13,
   /** A boss appears on every Nth wave. */
   bossEvery: 5,
   /** Maximum simultaneous live threats — a readability guard, not a difficulty knob. */
-  maxLiveThreats: 46,
+  maxLiveThreats: 52,
 } as const;
 
-/** Rewards paid out at the end of a run. */
+/**
+ * Rewards paid out at the end of a run.
+ *
+ * Calibrated against the score distribution the balance harness reports: an
+ * average run lands around 220k, so `coresPerScore` is set to make that worth
+ * roughly 500 Cores. At 2,000 Cores per single summon that is about four runs
+ * per pull, or thirty for a ten-pull — a few days of casual play, before daily
+ * rewards and account levels are counted.
+ */
 export const REWARDS = {
   /** Cores earned per point of score. */
-  coresPerScore: 0.02,
+  coresPerScore: 0.0016,
   /** Flat cores for finishing a wave. */
   coresPerWave: 12,
   /** Bonus cores for a new personal best. */
@@ -136,7 +155,7 @@ export const REWARDS = {
 
 export const XP = {
   /** Account XP per point of score. */
-  perScore: 0.05,
+  perScore: 0.004,
   perWave: 25,
   /** XP required to reach level n from n-1. */
   curve: (level: number): number => Math.round(120 + Math.pow(level, 1.6) * 45),

@@ -149,6 +149,7 @@ export class GameSession {
       {
         spawn: (req) => this.spawnThreat(req.def, req.angle, req.speedMult, req.swirlBias),
         incomingCount: () => this.pool.countIncoming(),
+        bossPresent: () => this.pool.findBoss() !== null,
         onWaveStart: (wave, boss) => this.events.emit('waveStart', { wave, boss }),
         onWaveClear: (wave) => this.completeWave(wave),
       },
@@ -528,7 +529,14 @@ export class GameSession {
 
   /** Does the shield (or its mirror) cover this angle? */
   private isCovered(angle: number, angRadius: number): { hit: boolean; perfect: boolean } {
-    if (this.fullCircle) return { hit: true, perfect: true };
+    if (this.fullCircle) {
+      // BULWARK covers every angle, but a PERFECT still has to be earned by
+      // pointing at the thing. Granting free perfects for standing still made
+      // the two Guardians that have this Ultimate outscore the rest of the
+      // roster fifty to one.
+      const perfect = angleDistance(angle, this.shieldAngle) <= (this.stats.arc / 2) * SHIELD.perfectTolerance;
+      return { hit: true, perfect };
+    }
 
     const check = (centre: number): { hit: boolean; perfect: boolean } => {
       const d = angleDistance(angle, centre);
@@ -740,7 +748,14 @@ export class GameSession {
     this.score += gained;
     this.combo += comboGain;
     if (this.combo > this.maxCombo) this.maxCombo = this.combo;
-    this.ultCharge = Math.min(this.ultCost, this.ultCharge + comboGain);
+
+    // An Ultimate cannot charge while one is running. Without this rule the
+    // defensive Ultimates pay for themselves: a full-circle shield blocks
+    // everything, everything blocked feeds the meter, and the meter refills
+    // before the effect ends. That loop never breaks.
+    if (this.ult.timer <= 0 && this.ult.gatherTimer <= 0) {
+      this.ultCharge = Math.min(this.ultCost, this.ultCharge + comboGain);
+    }
 
     switch (quality) {
       case 'block':
@@ -799,7 +814,20 @@ export class GameSession {
   }
 
   private damageNexus(t: Threat): void {
-    this.pool.release(t);
+    if (t.boss) {
+      // A Warden that reaches the nexus slams it and is thrown back out. It
+      // must not be removed: the boss wave only ends when the boss dies, so
+      // deleting it here would leave the director waiting forever — a
+      // soft-lock the balance harness found before any player could.
+      t.radius = this.arena.shieldR * 1.7;
+      t.x = this.arena.polarX(t.angle, t.radius);
+      t.y = this.arena.polarY(t.angle, t.radius);
+      t.bounce = 1.6;
+      t.flash = 1;
+      t.hitCooldown = ARMOUR_HIT_COOLDOWN;
+    } else {
+      this.pool.release(t);
+    }
     if (this.invuln > 0) return;
 
     const amount = t.def.damage;
@@ -850,7 +878,7 @@ export class GameSession {
         break;
       }
       case 'bulwark': {
-        const d = this.guardian.rarity === 'legendary' ? 9 : 5;
+        const d = this.guardian.rarity === 'legendary' ? 7 : 5;
         this.ult.duration = d;
         this.ult.timer = d;
         this.fullCircle = true;
