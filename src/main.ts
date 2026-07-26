@@ -20,6 +20,8 @@ import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
 import { RatesScreen } from './ui/screens/RatesScreen';
 import { PullResultScreen } from './ui/screens/PullResultScreen';
+import { DailyScreen } from './ui/screens/DailyScreen';
+import { HowToPlayScreen } from './ui/screens/HowToPlayScreen';
 
 function fail(message: string, err?: unknown): never {
   console.error(message, err);
@@ -57,6 +59,8 @@ async function main(): Promise<void> {
   app.screens.register(new ProfileScreen(app));
   app.screens.register(new RatesScreen(app));
   app.screens.register(new PullResultScreen(app));
+  app.screens.register(new DailyScreen(app));
+  app.screens.register(new HowToPlayScreen(app));
 
   // Hardware/browser back and Escape both mean "up one level".
   window.addEventListener('keydown', (e) => {

@@ -1033,6 +1033,24 @@ export class GameSession {
     this.slowTimer = Math.max(this.slowTimer, duration);
   }
 
+  // Read-only counters. The HUD, the coach and the quest system all need to
+  // know what has happened this run without being able to change it.
+  get blocksLanded(): number {
+    return this.counters.blocks;
+  }
+  get perfectsLanded(): number {
+    return this.counters.perfects;
+  }
+  get parriesLanded(): number {
+    return this.counters.parries;
+  }
+  get chainsLanded(): number {
+    return this.counters.chains;
+  }
+  get killCount(): number {
+    return this.counters.kills;
+  }
+
   /** 0..1 charge on the Ultimate, for the HUD. */
   get ultProgress(): number {
     return clamp01(this.ultCost <= 0 ? 1 : this.ultCharge / this.ultCost);

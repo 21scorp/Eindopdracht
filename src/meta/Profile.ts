@@ -507,6 +507,7 @@ export class Profile {
     this.touch();
   }
 
+  /** Advance the consecutive-day counter. Idempotent within a single day. */
   private updateStreak(): void {
     const today = todayKey();
     const last = this.data.daily.lastPlayedDate;
@@ -515,6 +516,34 @@ export class Profile {
     this.data.daily.streak = gap === 1 ? this.data.daily.streak + 1 : 1;
     this.data.daily.lastPlayedDate = today;
     this.events.emit('streak', { streak: this.data.daily.streak });
+  }
+
+  /** True when today's daily reward has not been collected yet. */
+  get dailyAvailable(): boolean {
+    this.rollDailyIfNeeded();
+    return this.data.daily.loginClaimedDate !== this.data.daily.date;
+  }
+
+  /** Which day of the seven-day track is next, 1-based. */
+  get dailyDay(): number {
+    return (this.data.daily.loginClaimed % 7) + 1;
+  }
+
+  /**
+   * Claim today's reward. Returns null when it has already been taken, so the
+   * caller can never double-pay by calling twice.
+   */
+  claimDaily(reward: { currency: CurrencyId; amount: number }, bonus?: { currency: CurrencyId; amount: number }): boolean {
+    if (!this.dailyAvailable) return false;
+    this.data.daily.loginClaimed++;
+    this.data.daily.loginClaimedDate = this.data.daily.date;
+    this.credit(reward.currency, reward.amount, `daily:day${this.dailyDay}`);
+    if (bonus) this.credit(bonus.currency, bonus.amount, 'daily:streak');
+    // Opening the game counts toward the streak even before a run is played.
+    this.updateStreak();
+    this.touch();
+    this.store.flush();
+    return true;
   }
 
   /** Track soft-capped core income so the economy cannot be farmed flat. */

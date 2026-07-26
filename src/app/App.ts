@@ -25,6 +25,7 @@ import { GameSession } from '../game/GameSession';
 import { GameRenderer } from '../game/GameRenderer';
 import { Vfx } from '../game/Vfx';
 import { Hud } from '../game/Hud';
+import { Coach } from '../game/Coach';
 import type { RunStats } from '../game/events';
 import { Profile } from '../meta/Profile';
 import { ScreenStack } from '../ui/Screen';
@@ -56,6 +57,7 @@ export class App {
   readonly screens: ScreenStack;
   readonly loop: Loop;
   readonly audio: GameAudio;
+  readonly coach: Coach;
 
   mode: AppMode = 'menu';
 
@@ -94,6 +96,7 @@ export class App {
     this.gameRenderer = new GameRenderer(this.renderer, textures, this.particles);
     this.vfx = new Vfx(this.session, this.particles, this.camera, this.renderer);
     this.hud = new Hud(this.renderer, textures);
+    this.coach = new Coach(this.renderer);
     this.screens = new ScreenStack(uiRoot);
 
     this.audio = new GameAudio(audio);
@@ -217,6 +220,7 @@ export class App {
     this.vfx.update(dt);
     this.vfx.ambient(simDt);
     this.hud.update(dt, this.session);
+    this.coach.update(dt, this.session);
     this.audio.update();
 
     this.camera.setVignette(this.session.integrity <= 1 ? 1 : 0);
@@ -247,6 +251,7 @@ export class App {
       if (this.mode === 'playing') {
         this.vfx.draw();
         this.hud.draw(this.session, this.gameRenderer.accent);
+        this.coach.draw(this.session);
       }
     }
 
@@ -310,6 +315,13 @@ export class App {
     this.session.arena.update(this.renderer.view);
     this.session.start(guardian, owned?.level ?? 1, owned?.stars ?? 1, seed);
     this.vfx.showBanner('HOLD THE LINE', guardian.name, guardian.hue, 1.6);
+
+    // First run ever: coach the two verbs in situ rather than up front.
+    if (!this.profile.hasSeenTip('basics')) {
+      this.coach.start(() => this.profile.markTipSeen('basics'));
+    } else {
+      this.coach.stop();
+    }
   }
 
   pause(): void {

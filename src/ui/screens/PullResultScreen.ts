@@ -75,8 +75,15 @@ export class PullResultScreen extends Screen {
     // Every card is placed face-down first, then flipped in sequence. Building
     // the grid up card by card would reflow the layout under the player's eyes
     // on every reveal.
+    //
+    // The best pull sits at the *top* of the grid but flips *last*: a large
+    // face-down card hanging over the whole sequence is the anticipation, and
+    // revealing it first would waste the other nine.
     const cards = sorted.map((g, i) => this.buildCard(g, i === sorted.length - 1));
-    for (const card of cards) this.grid.appendChild(card);
+    const hero = cards[cards.length - 1];
+    if (hero && cards.length > 1) this.grid.appendChild(hero);
+    for (let i = 0; i < cards.length - 1; i++) this.grid.appendChild(cards[i]!);
+    if (cards.length === 1 && hero) this.grid.appendChild(hero);
 
     for (let i = 0; i < cards.length; i++) {
       if (!this.revealing) break;
@@ -159,14 +166,21 @@ export class PullResultScreen extends Screen {
       );
     }
 
+    // Small cards get one badge and one line of detail. Three stacked chips is
+    // more information than a 96px card can hold without covering its own art.
     const flags = h('div', { class: 'pcard__flags' });
-    if (outcome.duplicate) {
-      if (outcome.starUp) flags.appendChild(h('span', { class: 'pcard__flag pcard__flag--star', text: 'STAR UP' }));
-      flags.appendChild(h('span', { class: 'pcard__flag', text: `+${fmt(outcome.shards)} shards` }));
-    } else {
-      flags.appendChild(h('span', { class: 'pcard__flag pcard__flag--new', text: 'NEW' }));
+    const badge = outcome.starUp
+      ? { cls: 'pcard__flag--star', text: 'STAR UP' }
+      : !outcome.duplicate
+        ? { cls: 'pcard__flag--new', text: 'NEW' }
+        : null;
+    if (badge) flags.appendChild(h('span', { class: `pcard__flag ${badge.cls}`, text: badge.text }));
+    if (result.featured && (isTop || !badge)) {
+      flags.appendChild(h('span', { class: 'pcard__flag pcard__flag--featured', text: 'RATE UP' }));
     }
-    if (result.featured) flags.appendChild(h('span', { class: 'pcard__flag pcard__flag--featured', text: 'RATE UP' }));
+    if (outcome.duplicate && (isTop || !outcome.starUp)) {
+      flags.appendChild(h('span', { class: 'pcard__flag', text: `+${fmt(outcome.shards)}` }));
+    }
     meta.appendChild(flags);
 
     front.appendChild(meta);

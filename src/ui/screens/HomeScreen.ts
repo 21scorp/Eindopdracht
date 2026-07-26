@@ -20,6 +20,9 @@ export class HomeScreen extends Screen {
   private hero!: HTMLElement;
   private statsRow!: HTMLElement;
   private levelChip!: HTMLElement;
+  private dailyBtn!: HTMLElement;
+  /** Only auto-open the daily reward once per session, however often we return. */
+  private dailyShown = false;
 
   constructor(private readonly app: App) {
     super('home', 'screen screen--overlay home');
@@ -59,6 +62,13 @@ export class HomeScreen extends Screen {
 
     const play = button('HOLD THE LINE', () => this.app.startRun(), { variant: 'hero', class: 'home__play' });
 
+    this.dailyBtn = h('button', {
+      class: 'dailybtn',
+      type: 'button',
+      onClick: () => this.app.screens.push('daily'),
+      aria: { label: 'Daily reward' },
+    });
+
     this.nav = new NavBar([
       { id: 'home', label: 'Home', glyph: '◈', onSelect: () => this.app.screens.replace('home') },
       { id: 'roster', label: 'Roster', glyph: '☰', onSelect: () => this.app.screens.push('roster') },
@@ -75,7 +85,7 @@ export class HomeScreen extends Screen {
     this.root.append(
       header,
       h('div', { class: 'home__body grow' }, this.hero, this.statsRow),
-      h('div', { class: 'home__actions' }, play),
+      h('div', { class: 'home__actions' }, this.dailyBtn, play),
       this.nav.root,
     );
   }
@@ -84,6 +94,13 @@ export class HomeScreen extends Screen {
     this.refresh();
     this.nav.setActive('home');
     this.nav.refreshBadges();
+
+    // Open the daily reward on arrival, once per day. It is the one thing the
+    // player should not have to go looking for.
+    if (this.app.profile.dailyAvailable && !this.dailyShown) {
+      this.dailyShown = true;
+      window.setTimeout(() => this.app.screens.push('daily'), 420);
+    }
   }
 
   private refresh(): void {
@@ -154,6 +171,19 @@ export class HomeScreen extends Screen {
     if (profile.data.daily.streak > 1) {
       this.statsRow.appendChild(statRow('Day streak', `${profile.data.daily.streak}`, true));
     }
+
+    clear(this.dailyBtn);
+    const available = profile.dailyAvailable;
+    this.dailyBtn.classList.toggle('is-ready', available);
+    this.dailyBtn.append(
+      h('span', { class: 'dailybtn__glyph', text: available ? '◆' : '◇' }),
+      h(
+        'span',
+        { class: 'col', style: { gap: '0' } },
+        h('span', { class: 'dailybtn__title', text: available ? 'DAILY READY' : 'DAILY CLAIMED' }),
+        h('span', { class: 't-label', text: `Day ${profile.dailyDay} of 7` }),
+      ),
+    );
     void fmt;
   }
 

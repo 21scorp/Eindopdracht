@@ -33,6 +33,8 @@ export class SettingsScreen extends Screen {
     clear(this.body);
 
     this.body.append(
+      button('HOW TO PLAY', () => this.app.screens.push('howtoplay'), { variant: 'ghost' }),
+
       sectionTitle('Accessibility'),
       this.slider('Screen shake', s.screenShake, 0, 1, 0.1, (v) => {
         this.app.profile.updateSettings({ screenShake: v });

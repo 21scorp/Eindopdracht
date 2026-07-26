@@ -50,6 +50,18 @@ const shot = async (name) => {
 try {
   log(`loading ${BASE}`);
   await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1600);
+
+  // A fresh context means a fresh profile, so the daily reward opens itself.
+  await shot('00-daily');
+  const dailyClaimed = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) => /^CLAIM/.test(b.textContent ?? ''));
+    if (!btn) return false;
+    btn.click();
+    return true;
+  });
+  console.log('  daily reward claimed:', dailyClaimed);
+  if (!dailyClaimed) throw new Error('daily reward did not open for a new profile');
   await page.waitForTimeout(1400);
   await shot('01-home');
 
@@ -152,8 +164,15 @@ try {
   await page.getByRole('button', { name: /SUMMON x10/i }).click();
   await page.waitForTimeout(1300);
   await shot('06-summon-cinematic');
-  await page.waitForTimeout(3200);
+  await page.waitForTimeout(4200);
   await shot('07-pull-results');
+  // Force the tail of the reveal so the hero card is captured settled.
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'REVEAL ALL');
+    btn?.click();
+  });
+  await page.waitForTimeout(1100);
+  await shot('07b-pull-settled');
 
   const afterPull = await page.evaluate(() => ({
     screen: window.aegis.screens.currentName,
@@ -173,6 +192,7 @@ try {
     ['10-rates', 'rates'],
     ['11-settings', 'settings'],
     ['12-profile', 'profile'],
+    ['12b-howto', 'howtoplay'],
   ]) {
     log(`opening ${screen}`);
     await page.evaluate((s) => {

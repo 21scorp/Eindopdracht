@@ -27,9 +27,6 @@
 
 .topbar__back {
   flex: none;
-}
-
-.topbar__back {
   font-size: 26px;
   line-height: 1;
   padding-bottom: 4px;
@@ -817,16 +814,20 @@
 
 .pcard {
   position: relative;
-  aspect-ratio: 3 / 4;
+  /* Taller than 3:4 so the text band below the emblem always has room for a
+     name, five stars and up to three flags without climbing over the art. */
+  aspect-ratio: 3 / 4.5;
   perspective: 900px;
 }
 
 .pcard--hero {
   grid-column: 1 / -1;
-  aspect-ratio: 4 / 5;
-  max-width: 340px;
+  /* Wider than tall so it does not push the rest of the grid below the fold. */
+  aspect-ratio: 4 / 3.4;
+  max-width: 420px;
   justify-self: center;
   width: 100%;
+  margin-bottom: 4px;
 }
 
 .pcard__inner {
@@ -890,11 +891,11 @@
   background: linear-gradient(180deg, rgba(4, 5, 11, 0) 34%, rgba(4, 5, 11, 0.92) 88%);
 }
 
-/* Small cards: art band on top, text band underneath. */
+/* Small cards: art band on top, text band underneath. Two fixed bands rather
+   than a square plus overflow, so the layout cannot collide with itself. */
 .pcard__artwrap {
   position: absolute;
-  inset: 0 0 auto 0;
-  aspect-ratio: 1;
+  inset: 0 0 52% 0;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -908,18 +909,20 @@
 
 .pcard__meta {
   position: absolute;
-  inset: auto 0 0 0;
+  inset: 48% 0 0 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  justify-content: flex-start;
   gap: 3px;
-  padding: 8px;
-  background: linear-gradient(180deg, rgba(6, 9, 18, 0) 0%, rgba(6, 9, 18, 0.94) 24%);
+  padding: 6px 8px 8px;
+  background: linear-gradient(180deg, rgba(6, 9, 18, 0) 0%, rgba(6, 9, 18, 0.96) 18%);
 }
 
 .pcard--hero .pcard__meta {
+  inset: auto 0 0 0;
   gap: 5px;
-  padding: 12px;
+  padding: 14px;
   background: none;
 }
 
@@ -943,6 +946,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .pcard__title {
@@ -1715,7 +1720,7 @@
   }
 
   .pullresult__grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .pcard--hero {
@@ -1737,4 +1742,254 @@
   .banner__info {
     flex: 1;
   }
+}
+
+/* ------------------------------------------------------------------- daily */
+
+.dailybtn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 11px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: rgba(11, 16, 32, 0.7);
+  color: var(--text-dim);
+  cursor: pointer;
+  text-align: left;
+  transition: all 200ms var(--ease-out);
+}
+
+.dailybtn.is-ready {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--parry) 55%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--parry) 18%, transparent), rgba(11, 16, 32, 0.7));
+  box-shadow: 0 0 26px -12px var(--parry);
+}
+
+.dailybtn__glyph {
+  font-size: 20px;
+  color: var(--parry);
+  flex: none;
+}
+
+.dailybtn__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+}
+
+.daily {
+  align-items: center;
+  justify-content: center;
+}
+
+.daily__card {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  --accent: var(--parry);
+}
+
+.daily__headline {
+  gap: 4px;
+}
+
+.daily__streak {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--parry);
+}
+
+.daily__track {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.daily__cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 4px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.daily__cell.is-claimed {
+  opacity: 0.42;
+}
+
+.daily__cell.is-current {
+  border-color: color-mix(in srgb, var(--parry) 70%, transparent);
+  background: color-mix(in srgb, var(--parry) 12%, transparent);
+  box-shadow: 0 0 22px -10px var(--parry);
+}
+
+.daily__cell.is-highlight {
+  grid-column: span 4;
+  flex-direction: row;
+  justify-content: center;
+  gap: 10px;
+  border-color: color-mix(in srgb, var(--legendary) 55%, transparent);
+}
+
+.daily__amount {
+  font-size: 13px;
+}
+
+.daily__tick {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 11px;
+  color: var(--heal);
+}
+
+.daily__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daily__bonus {
+  font-size: 12px;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------- how to play */
+
+.howto__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 24px;
+}
+
+.howto__intro {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.howto__step {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 13px 15px;
+  margin-bottom: 8px;
+}
+
+.howto__steptitle {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  color: var(--parry);
+}
+
+.howto__scores {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.howto__scorerow {
+  display: grid;
+  grid-template-columns: 74px 44px 1fr;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line-soft);
+}
+
+.howto__scorename {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+
+.howto__scorepts {
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.howto__scorecombo {
+  font-size: 9px;
+}
+
+.howto__scorehow {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+
+.howto__threats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.howto__threat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--accent);
+}
+
+.howto__threatname {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.howto__controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+}
+
+.howto__control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.howto__key {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.howto__closing {
+  padding-top: 18px;
+  font-style: italic;
 }
