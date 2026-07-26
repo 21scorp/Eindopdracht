@@ -9,7 +9,7 @@
  */
 
 import { chromium } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -24,9 +24,13 @@ function log(step) {
   console.log(`\x1b[36m▸\x1b[0m ${step}`);
 }
 
-const browser = await chromium.launch({
-  executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-});
+// Prefer a pre-provisioned browser when one is present (as in this dev
+// container); otherwise let Playwright resolve its own download, which is what
+// CI has after `playwright install`.
+const PRESET_CHROMIUM = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const browser = await chromium.launch(
+  existsSync(PRESET_CHROMIUM) ? { executablePath: PRESET_CHROMIUM } : {},
+);
 const context = await browser.newContext({
   viewport: { width: 412, height: 892 },
   deviceScaleFactor: 2,

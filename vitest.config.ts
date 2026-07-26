@@ -12,6 +12,7 @@ export default defineConfig({
     // localStorage declare `@vitest-environment happy-dom` at the top of the file.
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    exclude: ['tests/helpers/**'],
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],

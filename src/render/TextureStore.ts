@@ -114,6 +114,11 @@ export class TextureStore {
     return this.textures.has(key) || this.generators.has(key);
   }
 
+  /** Every key the store can resolve. Used by the manifest check. */
+  keys(): string[] {
+    return [...new Set([...this.generators.keys(), ...this.textures.keys()])].sort();
+  }
+
   /**
    * Resolve a key to a texture, generating it on first use.
    * An unknown key yields a loud magenta placeholder rather than throwing, so a
