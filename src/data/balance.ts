@@ -79,9 +79,9 @@ export const FEEL = {
 
 export const PULSE = {
   /** Ring travel: starts at the nexus edge, reaches the shield in this fraction of the window. */
-  travelFraction: 0.72,
+  travelFraction: 0.66,
   /** Half-thickness of the lethal annulus, as a fraction of the shield radius. */
-  bandHalfWidth: 0.13,
+  bandHalfWidth: 0.18,
   /** A parry inside this fraction of the shield radius counts as PERFECT. */
   perfectInner: 0.86,
   /** Force multiplier applied to threats caught by the pulse. */

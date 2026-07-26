@@ -47,6 +47,10 @@ export interface SummonOptions {
   onComplete: () => void;
   /** Called the moment the rarity tell fires, so audio can hit it exactly. */
   onTell?: (rarity: Rarity) => void;
+  /** Called the moment the burst fires. */
+  onBurst?: (rarity: Rarity) => void;
+  /** Called a few times during the charge with 0..1 progress and the drama. */
+  onCharge?: (progress: number, drama: number) => void;
 }
 
 export class SummonCinematic {
@@ -173,8 +177,19 @@ export class SummonCinematic {
     if (next === 'burst') this.onBurst();
   }
 
+  private chargeTicks = 0;
+
   private updateCharge(dt: number): void {
     const p = clamp01(this.t / this.d.charge);
+
+    // The charge drone re-triggers a handful of times, rising each step. One
+    // long note cannot accelerate the way the visuals do.
+    const wantTicks = 1 + Math.floor(p * 5);
+    while (this.chargeTicks < wantTicks) {
+      this.chargeTicks++;
+      this.opts.onCharge?.(this.chargeTicks / 6, this.drama);
+    }
+
     // Motes accelerate inward; the pull-in is what builds the pressure.
     for (const m of this.motes) {
       m.radius -= dt * m.speed * (0.35 + quadIn(p) * 1.5);
@@ -249,6 +264,7 @@ export class SummonCinematic {
   }
 
   private onBurst(): void {
+    this.opts.onBurst?.(this.opts.topRarity);
     this.camera.addTrauma(0.45 + this.drama * 0.5);
     this.camera.punch(1.2 + this.drama * 1.4);
     this.camera.addAberration(0.8 + this.drama * 0.2);

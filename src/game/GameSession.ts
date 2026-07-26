@@ -34,6 +34,12 @@ import type { GameEvents, HitQuality, RunStats } from './events';
 
 export type SessionPhase = 'idle' | 'intro' | 'playing' | 'dying' | 'over';
 
+/**
+ * Seconds an armoured target is immune after being hit. Long enough that
+ * breaking armour takes real time, short enough that it never feels unresponsive.
+ */
+const ARMOUR_HIT_COOLDOWN = 0.22;
+
 /** Damage dealt to armoured targets by each kind of contact. */
 const DAMAGE = {
   block: 1,
@@ -268,6 +274,9 @@ export class GameSession {
     if (this.phase !== 'playing' || !this.ultimateReady) return false;
     this.ultCharge = 0;
     this.counters.ults++;
+    // Ultimates are triggered from input, which happens between simulation
+    // steps, so the cached live view can be a frame stale.
+    this.pool.refresh();
     const id = this.guardian.ultimate;
     this.events.emit('ultimateFired', { id });
     this.applyUltimate(id);
@@ -424,6 +433,7 @@ export class GameSession {
       t.scale = Math.min(1, t.scale + dt * 5.5);
       if (t.flash > 0) t.flash = Math.max(0, t.flash - dt * 6);
       if (t.bounce > 0) t.bounce = Math.max(0, t.bounce - dt * 3.5);
+      if (t.hitCooldown > 0) t.hitCooldown = Math.max(0, t.hitCooldown - dt);
       t.trailTimer += dt;
 
       switch (t.state) {
@@ -448,7 +458,9 @@ export class GameSession {
         if (!target.active || target.state !== 'incoming' || target === p) continue;
         const dx = target.x - p.x;
         const dy = target.y - p.y;
-        const rr = target.size + p.size;
+        // Deflected shots hit with a generous radius: they are energised, and a
+        // near miss on a chain reads as a bug rather than as skill.
+        const rr = target.size + p.size * 1.6;
         if (dx * dx + dy * dy > rr * rr) continue;
         this.registerHit(target, 'chain', target.angle);
         // A projectile survives its first chain kill, giving multi-kills room to
@@ -463,12 +475,17 @@ export class GameSession {
 
     // Shield and nexus interaction.
     for (const t of live) {
-      if (!t.active || t.state !== 'incoming' || t.delay > 0) continue;
+      if (!t.active || t.state !== 'incoming' || t.delay > 0 || t.hitCooldown > 0) continue;
 
       const angRadius = arena.angularRadius(t.size, Math.max(t.radius, 1));
       const contactR = arena.shieldR + t.size + arena.shieldHalfThickness;
+      // The shield is a *band*, not a disc. Without the inner bound it would
+      // also catch anything that already slipped past at another angle and
+      // then drifted into the covered arc, which quietly removes the whole
+      // consequence of missing a block.
+      const innerR = arena.shieldR - t.size - arena.shieldHalfThickness;
 
-      if (t.radius <= contactR) {
+      if (t.radius <= contactR && t.radius >= innerR) {
         const covered = this.isCovered(t.angle, angRadius);
         if (covered.hit) {
           this.handleShieldContact(t, covered.perfect);
@@ -486,7 +503,7 @@ export class GameSession {
     if (this.pulseActive) {
       const band = arena.shieldR * PULSE.bandHalfWidth;
       for (const t of live) {
-        if (!t.active || t.state !== 'incoming' || t.delay > 0) continue;
+        if (!t.active || t.state !== 'incoming' || t.delay > 0 || t.hitCooldown > 0) continue;
         if (Math.abs(t.radius - this.pulseRadius) > band + t.size) continue;
         this.handlePulseCatch(t);
       }
@@ -559,7 +576,53 @@ export class GameSession {
     if (t.def.motion === 'spiral' || t.def.motion === 'drift') t.facing += t.spin * t.age;
   }
 
+  /**
+   * Deflected shots steer gently toward the nearest incoming threat ahead of
+   * them.
+   *
+   * Without this, chains essentially never happen: a shot leaves along the
+   * radius it was blocked on and everything else is approaching along a
+   * *different* radius, so the two only meet by coincidence. A small amount of
+   * homing is what turns "I blocked it" into "I blocked it into three others",
+   * which is the whole reason blocks return fire instead of just vanishing.
+   */
+  private steerDeflected(t: Threat, dt: number): void {
+    let bestX = 0;
+    let bestY = 0;
+    let bestScore = Infinity;
+    const speed = Math.hypot(t.vx, t.vy);
+    if (speed < 1) return;
+    const dirX = t.vx / speed;
+    const dirY = t.vy / speed;
+
+    for (const other of this.pool.live) {
+      if (!other.active || other.state !== 'incoming' || other.delay > 0) continue;
+      const dx = other.x - t.x;
+      const dy = other.y - t.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 1 || dist > this.arena.unit * 0.55) continue;
+      // Only consider targets roughly ahead, so shots never turn back inward.
+      const forward = (dx * dirX + dy * dirY) / dist;
+      if (forward < 0.35) continue;
+      const score = dist * (2 - forward);
+      if (score < bestScore) {
+        bestScore = score;
+        bestX = dx / dist;
+        bestY = dy / dist;
+      }
+    }
+    if (bestScore === Infinity) return;
+
+    const turn = Math.min(1, 5.5 * dt);
+    const nx = dirX + (bestX - dirX) * turn;
+    const ny = dirY + (bestY - dirY) * turn;
+    const len = Math.hypot(nx, ny) || 1;
+    t.vx = (nx / len) * speed;
+    t.vy = (ny / len) * speed;
+  }
+
   private moveDeflected(t: Threat, dt: number): void {
+    this.steerDeflected(t, dt);
     t.x += t.vx * dt;
     t.y += t.vy * dt;
     t.facing += t.spin * dt;
@@ -578,6 +641,7 @@ export class GameSession {
       t.hp -= perfect ? DAMAGE.perfect : DAMAGE.block;
       t.flash = 1;
       t.bounce = 1;
+      t.hitCooldown = ARMOUR_HIT_COOLDOWN;
       t.radius += this.arena.px(0.02);
       if (t.boss) {
         this.events.emit('bossDamaged', { threat: t, hp: Math.max(0, t.hp), maxHp: t.maxHp });
@@ -603,6 +667,7 @@ export class GameSession {
       t.hp -= DAMAGE.parry;
       t.flash = 1;
       t.bounce = 1.4;
+      t.hitCooldown = ARMOUR_HIT_COOLDOWN;
       t.radius += this.arena.px(0.035);
       if (t.boss) this.events.emit('bossDamaged', { threat: t, hp: Math.max(0, t.hp), maxHp: t.maxHp });
       if (t.hp <= 0) this.registerHit(t, 'parry', t.angle);

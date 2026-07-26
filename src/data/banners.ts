@@ -56,13 +56,19 @@ export const STANDARD_PITY: PityConfig = {
   epicFloor: 10,
 };
 
-/** The published rate table. Every banner shares it; only rate-up differs. */
+/**
+ * The published rate table. Every banner shares it; only rate-up differs.
+ *
+ * Ordered so the tier names mean what they say — Common really is the most
+ * common outcome. A table where "Rare" is the likeliest result is the kind of
+ * detail that quietly erodes trust in every other number on the screen.
+ */
 export const STANDARD_RATES: Record<Rarity, number> = {
   mythic: 0.007,
   legendary: 0.053,
   epic: 0.2,
-  rare: 0.44,
-  common: 0.3,
+  rare: 0.3,
+  common: 0.44,
 };
 
 export const BANNERS: readonly Banner[] = [

@@ -65,6 +65,26 @@ async function main(): Promise<void> {
     }
   });
 
+  // One delegated listener gives every control a click sound. Wiring audio into
+  // each button individually would mean never forgetting one, forever.
+  uiRoot.addEventListener(
+    'pointerdown',
+    (e) => {
+      const target = (e.target as HTMLElement | null)?.closest(
+        '.btn, .navbtn, .chipbtn, .gcard, .banner__tab, .segmented__btn, .switch, .levelchip, .hero__frame',
+      );
+      if (!target) return;
+      if (target.classList.contains('is-disabled') || (target as HTMLButtonElement).disabled) {
+        app.audio.uiDenied();
+        return;
+      }
+      if (target.classList.contains('btn--primary')) app.audio.uiConfirm();
+      else if (target.classList.contains('topbar__back')) app.audio.uiBack();
+      else app.audio.uiTap();
+    },
+    { passive: true },
+  );
+
   await app.boot();
   app.showMenu('home');
 

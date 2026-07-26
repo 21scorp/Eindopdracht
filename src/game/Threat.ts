@@ -56,6 +56,15 @@ export interface Threat {
 
   /** Set when an armoured threat bounces, so it recoils visibly. */
   bounce: number;
+  /**
+   * Seconds before this threat can be hit again.
+   *
+   * Without it an armoured threat sitting against the shield is struck once per
+   * simulation step — 120 times a second — and a two-hit Bulwark dies in 17
+   * milliseconds. The cooldown is what makes armour mean "hit it repeatedly"
+   * instead of "touch it once".
+   */
+  hitCooldown: number;
   /** Score multiplier carried from the spawn context (e.g. boss children). */
   scoreMult: number;
   /** Marks children of a splitter so they cannot split again. */
@@ -94,6 +103,7 @@ function makeThreat(def: ThreatDef): Threat {
     flash: 0,
     deathTimer: 0,
     bounce: 0,
+    hitCooldown: 0,
     scoreMult: 1,
     generation: 0,
     boss: false,
@@ -144,6 +154,7 @@ export class ThreatPool {
       t.flash = 0;
       t.deathTimer = 0;
       t.bounce = 0;
+      t.hitCooldown = 0;
       t.scoreMult = def.scoreMult;
       t.generation = 0;
       t.boss = def.boss ?? false;

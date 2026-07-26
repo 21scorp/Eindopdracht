@@ -213,6 +213,9 @@ export class BannerScreen extends Screen {
       topRarity: top.rarity,
       count,
       featured: hasFeatured,
+      onCharge: (progress, drama) => this.app.audio.summonCharge(progress, drama),
+      onTell: (rarity) => this.app.audio.summonTell(rarity),
+      onBurst: (rarity) => this.app.audio.summonBurst(rarity),
       onComplete: () => {
         this.app.endCinematic();
         this.pulling = false;

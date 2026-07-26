@@ -41,13 +41,19 @@ export class Rng {
   private d: number;
 
   constructor(seed: string | RngState = String(Date.now())) {
-    const s = typeof seed === 'string' ? seedFromString(seed) : seed;
+    const fromString = typeof seed === 'string';
+    const s = fromString ? seedFromString(seed) : seed;
     this.a = s.a >>> 0;
     this.b = s.b >>> 0;
     this.c = s.c >>> 0;
     this.d = s.d >>> 0;
-    // Discard a few outputs so poorly-distributed seeds settle.
-    for (let i = 0; i < 12; i++) this.next();
+    // Discard a few outputs so a poorly-distributed *seed* settles. An explicit
+    // state is restored verbatim: warming it here would advance the stream on
+    // every reload, so a persisted gacha state would never resume where it
+    // stopped and a recorded pull could not be reproduced.
+    if (fromString) {
+      for (let i = 0; i < 12; i++) this.next();
+    }
   }
 
   /** Raw uniform float in [0, 1). */
@@ -130,8 +136,13 @@ export class Rng {
     return this.range(-mag, mag);
   }
 
+  /**
+   * The internal words are produced by `|0` arithmetic and so can be negative.
+   * State is exported unsigned so a save round-trip is byte-identical — every
+   * operation in `next()` is equivalent modulo 2^32, so the stream is unchanged.
+   */
   getState(): RngState {
-    return { a: this.a, b: this.b, c: this.c, d: this.d };
+    return { a: this.a >>> 0, b: this.b >>> 0, c: this.c >>> 0, d: this.d >>> 0 };
   }
 
   setState(s: RngState): void {

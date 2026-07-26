@@ -192,18 +192,19 @@ try {
     if (stats) window.aegis.screens.replace('results', { stats, rewards: window.aegis.lastRun.rewards });
   });
   await page.waitForTimeout(500);
-  const cardSize = await page.evaluate(async () => {
-    const mod = await import('./src/meta/share.ts').catch(() => null);
-    if (mod) return 'dev';
-    // Production: reach it the way a player does.
+  const shareResult = await page.evaluate(async () => {
     const btn = [...document.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'SHARE');
     if (!btn) return 'no-button';
     btn.click();
-    await new Promise((r) => setTimeout(r, 900));
+    await new Promise((r) => setTimeout(r, 1200));
     return 'clicked';
   });
-  console.log('  share path:', cardSize);
+  console.log('  share path:', shareResult);
+  if (shareResult === 'no-button') throw new Error('results screen has no share button');
   await shot('13-share');
+
+  const finalStats = await page.evaluate(() => window.aegis.lastRun?.stats ?? null);
+  console.log('  run stats:', JSON.stringify(finalStats));
 } catch (err) {
   errors.push(`test failure: ${err.message}`);
   await page.screenshot({ path: join(OUT, 'zz-failure.png') }).catch(() => {});

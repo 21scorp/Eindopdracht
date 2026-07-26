@@ -28,6 +28,9 @@ import { Hud } from '../game/Hud';
 import type { RunStats } from '../game/events';
 import { Profile } from '../meta/Profile';
 import { ScreenStack } from '../ui/Screen';
+import { audio } from '../audio/AudioEngine';
+import { GameAudio } from '../audio/GameAudio';
+import { haptics } from '../audio/haptics';
 
 export type AppMode = 'menu' | 'playing' | 'cinema';
 
@@ -52,6 +55,7 @@ export class App {
   readonly profile: Profile;
   readonly screens: ScreenStack;
   readonly loop: Loop;
+  readonly audio: GameAudio;
 
   mode: AppMode = 'menu';
 
@@ -92,6 +96,11 @@ export class App {
     this.hud = new Hud(this.renderer, textures);
     this.screens = new ScreenStack(uiRoot);
 
+    this.audio = new GameAudio(audio);
+    this.audio.bind(this.session);
+    audio.install();
+    this.syncSettings();
+
     this.renderer.onResize((view) => {
       this.session.arena.update(view);
     });
@@ -106,9 +115,11 @@ export class App {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         this.profile.save();
+        this.audio.music.stop();
         if (this.mode === 'playing') this.pause();
       } else {
         this.loop.resetClock();
+        if (this.mode === 'playing') this.audio.music.start();
       }
     });
 
@@ -206,12 +217,16 @@ export class App {
     this.vfx.update(dt);
     this.vfx.ambient(simDt);
     this.hud.update(dt, this.session);
+    this.audio.update();
 
     this.camera.setVignette(this.session.integrity <= 1 ? 1 : 0);
   }
 
   private updateMenu(dt: number): void {
     this.menuTime += dt;
+    // The score starts as soon as the browser lets us make sound, not when a
+    // run begins — silence on the home screen makes the game feel unfinished.
+    if (!this.audio.music.isRunning) this.audio.music.start();
     this.particles.update(dt);
     this.gameRenderer.update(dt, this.session);
     this.vfx.update(dt);
@@ -273,6 +288,7 @@ export class App {
   /** Enter the menu mode: the arena idles as a live background. */
   showMenu(screen = 'home'): void {
     this.mode = 'menu';
+    this.audio.music.setIntensity(0.1);
     this.input.suppressed = true;
     this.session.phase = 'idle';
     this.camera.reset();
@@ -389,12 +405,14 @@ export class App {
     this.mode = 'menu';
   }
 
-  /** Push accessibility and performance settings into the engine. */
+  /** Push accessibility, audio and performance settings into the engine. */
   syncSettings(): void {
     const s = this.profile.settings;
     this.camera.intensity = clamp(s.screenShake, 0, 1);
     this.renderer.effectScale = s.reducedFlash ? 0.28 : 1;
     this.hud.mirrored = s.leftHanded;
+    haptics.enabled = s.haptics;
+    audio.setVolumes(s.music, s.sfx);
     this.applyQualitySetting();
   }
 }

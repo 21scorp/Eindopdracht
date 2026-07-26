@@ -83,6 +83,7 @@ export class PullResultScreen extends Screen {
       await delay(REVEAL_STAGGER + rarityRank(sorted[i]!.result.rarity) * 70);
       if (!this.revealing) break;
       cards[i]!.classList.add('is-revealed');
+      this.app.audio.cardReveal(sorted[i]!.result.rarity, i);
       if (rarityRank(sorted[i]!.result.rarity) >= 3) {
         this.app.camera.addTrauma(0.12);
         this.app.renderer.flash = Math.max(this.app.renderer.flash, 0.14);
