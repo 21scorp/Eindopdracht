@@ -167,20 +167,41 @@
   height: 4px;
 }
 
+/* See the narrow-phone block in global.css: at 320px the header cannot hold a
+   level, a name, three currencies and a settings button, so the name and its XP
+   bar step aside rather than being crushed to one ellipsis. This lives here
+   because this file loads after global.css and would otherwise win. */
+@media (max-width: 380px) {
+  .levelchip__meta {
+    display: none;
+  }
+}
+
 .home__body {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 14px 0 0;
   min-height: 0;
+  /* On a 568px-tall phone the hero card and the stats row want 315px of a 187px
+     box. Before this the hero simply overflowed its parent and was painted on
+     top of the stats — two legible things stacked into one illegible one. A
+     little scrolling on the home screen is a normal phone; overlapping text is
+     a broken app. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.home__body > * {
+  flex-shrink: 0;
 }
 
 .home__hero {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  flex: 1;
-  min-height: 0;
+  /* Grows into spare height, never shrinks below the card it holds. */
+  flex: 1 0 auto;
 }
 
 .hero__frame {

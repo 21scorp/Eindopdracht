@@ -546,6 +546,15 @@ input:focus-visible,
   gap: 12px;
   min-width: 0;
 }
+/* Nothing inside a scrolling column should shrink. The container's whole job is
+   to scroll when its contents are too tall; a child that gives instead turns
+   "too tall" into "cut in half", and only the children that clip their own
+   overflow give — so the damage lands on exactly the panels and framed lists
+   that look most deliberate. Declared before `.grow` so an explicitly growing
+   child still wins. */
+.scroll > * {
+  flex-shrink: 0;
+}
 .grow {
   flex: 1;
   min-height: 0;
@@ -599,6 +608,43 @@ input:focus-visible,
   border-radius: 999px;
   background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, transparent), var(--accent));
   transition: width 420ms var(--ease-out);
+}
+
+/* The narrow phones.
+ *
+ * At 320px the home header has to hold a level, a name, three currencies and a
+ * settings button, and a rich account makes every one of those figures as wide
+ * as it ever gets — seven digits of Cores is not a hypothetical. Something has
+ * to give, and the thing that gives should be a whole element that disappears
+ * cleanly rather than a name crushed to a single ellipsis behind a hard clip.
+ * The level circle survives; the name and its XP bar are one tap away on the
+ * profile screen either way. */
+@media (max-width: 380px) {
+  .levelchip {
+    padding: 5px;
+    max-width: none;
+  }
+  .levelchip__meta {
+    display: none;
+  }
+  .wallet {
+    gap: 4px;
+  }
+  .currency {
+    gap: 4px;
+    padding: 5px 8px 5px 5px;
+    font-size: 12px;
+  }
+  .currency__icon {
+    width: 18px;
+    height: 18px;
+  }
+  /* Three actions across a 320px results screen: the labels are the content,
+     the padding is not. */
+  .btn {
+    padding: 14px 14px;
+    gap: 8px;
+  }
 }
 
 /* Respect the system setting. Motion is decoration here, never information. */
