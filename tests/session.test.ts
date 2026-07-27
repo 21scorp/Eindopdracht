@@ -616,6 +616,104 @@ describe('the Warden enrage', () => {
   });
 });
 
+describe('starting over', () => {
+  /**
+   * The bug this guards against has appeared three times in different clothes:
+   * a run inheriting something from the run before it. A permanent second
+   * shield that survived into the next run, an enrage flag that stayed set, a
+   * draft that carried over. Rather than remembering to add an assertion each
+   * time, compare the whole observable surface of a used session against a
+   * fresh one.
+   */
+  const surface = (s: GameSession) => ({
+    phase: s.phase,
+    score: s.score,
+    combo: s.combo,
+    maxCombo: s.maxCombo,
+    multiplier: s.multiplier,
+    overdrive: s.overdrive,
+    integrity: s.integrity,
+    maxIntegrity: s.maxIntegrity,
+    invuln: s.invuln,
+    ultCharge: s.ultCharge,
+    ultCost: s.ultCost,
+    ultId: s.ult.id,
+    ultTimer: s.ult.timer,
+    fullCircle: s.fullCircle,
+    mirror: s.mirror,
+    arcHalf: s.arcHalf,
+    stats: s.stats,
+    resonance: [...s.resonance],
+    offer: [...s.offer],
+    pulseActive: s.pulseActive,
+    pulseCooldown: s.pulseCooldown,
+    live: s.pool.live.length,
+    wave: s.director.wave,
+    elapsed: s.elapsed,
+    sentinels: s.getSentinels().length,
+  });
+
+  it('leaves nothing of the last run behind', () => {
+    const fresh = makeSession();
+    const fresh0 = surface(fresh);
+
+    const used = makeSession();
+    // Do everything a run can do: take cards, fire an Ultimate, take damage,
+    // build a combo, spawn a crowd, enrage a boss.
+    for (const id of ['twin-guard', 'wide-guard', 'overflow', 'reinforced']) used.takeResonance(id);
+    used.rollOffer(2);
+    used.shieldAngle = 0;
+    used.shieldTarget = 0;
+    for (let i = 0; i < 6; i++) {
+      place(used, 'orb', 0, 1.02);
+      advance(used, STEP * 3);
+    }
+    used.ultCharge = used.ultCost;
+    used.fireUltimate();
+    const boss = place(used, 'warden', 1, 1.6);
+    boss.boss = true;
+    boss.hp = 2;
+    advance(used, 3);
+    used.integrity = 1;
+    used.pulse();
+    advance(used, 1);
+
+    used.start(getGuardian('vane'), 1, 1, 'second-run');
+    expect(surface(used)).toEqual(fresh0);
+  });
+
+  it('lets a once-per-run save happen again in the next run', () => {
+    // SECOND WIND and SIPHON's heal budget are both private counters, so the
+    // only honest way to check they reset is to spend one and spend it again.
+    const kill = (s: GameSession): number => {
+      s.shieldAngle = Math.PI;
+      s.shieldTarget = Math.PI;
+      const t = place(s, 'orb', 0, 0.2);
+      t.speed = s.arena.unit * 0.6;
+      advance(s, 0.6);
+      return s.integrity;
+    };
+
+    const s = makeSession();
+    s.takeResonance('second-wind');
+    s.integrity = 1;
+    expect(kill(s)).toBe(1);
+
+    s.start(getGuardian('vane'), 1, 1, 'again');
+    s.takeResonance('second-wind');
+    s.integrity = 1;
+    expect(kill(s)).toBe(1);
+  });
+
+  it('does not carry a Guardian swap into the old stat block', () => {
+    const s = makeSession('vane');
+    const vane = { ...s.stats };
+    s.start(getGuardian('eclipse'), 1, 1, 'x');
+    expect(s.stats).not.toEqual(vane);
+    expect(s.stats).toEqual(s.baseStats);
+  });
+});
+
 describe('run statistics', () => {
   it('reports counts that match what happened', () => {
     const session = makeSession();
