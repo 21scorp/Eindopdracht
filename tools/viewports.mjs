@@ -137,6 +137,39 @@ for (const vp of VIEWPORTS) {
   await context.close();
 }
 
+// --- resizing *during* a run ------------------------------------------------
+// A desktop window drag or a tablet entering split view changes the arena under
+// a live run. Everything in flight is stored in pixels, so without a rescale a
+// grown window leaves live threats inside the shield — past the band that can
+// block them, on an uninterruptible course for the nexus.
+{
+  const context = await browser.newContext({ viewport: { width: 520, height: 460 }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1400);
+  await page.evaluate(() => {
+    window.aegis.screens.closeAll();
+    window.aegis.startRun();
+  });
+  await page.waitForTimeout(4000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => {
+    const s = window.aegis.session;
+    const a = s.arena;
+    const live = s.pool.live.filter((t) => t.active && t.state === 'incoming');
+    return {
+      live: live.length,
+      inside: live.filter((t) => t.radius < a.shieldR * 0.95).length,
+    };
+  });
+  console.log(`  mid-run resize    ${after.live} in flight, ${after.inside} stranded inside the shield`);
+  if (after.inside > 0) {
+    problems.push({ check: 'mid-run resize', stranded: after.inside });
+  }
+  await context.close();
+}
+
 await browser.close();
 
 console.log('');

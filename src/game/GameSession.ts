@@ -346,6 +346,50 @@ export class GameSession {
     return true;
   }
 
+  /**
+   * Keep a run consistent when the arena changes size underneath it.
+   *
+   * Everything in flight is stored in pixels — a radius, a velocity, a size —
+   * and the arena is sized from the shortest side of the viewport. Resize the
+   * window and those pixel values suddenly mean something else: growing it by
+   * a factor of two leaves every live threat *inside* the shield, past the band
+   * that can block them and on an uninterruptible course for the nexus. A
+   * desktop window drag or a tablet entering split view was enough.
+   *
+   * Rescaling by the change in shield radius — about the old centre, because
+   * the arena moves as well as resizes — keeps every threat exactly where it
+   * was relative to the arena, which is the only frame of reference the player
+   * has.
+   */
+  rescale(previous: { shieldR: number; cx: number; cy: number }): void {
+    const k = this.arena.shieldR / previous.shieldR;
+    if (!Number.isFinite(k) || k <= 0 || Math.abs(k - 1) < 0.001) return;
+
+    // A resize can land between the spawn and the next update, and the live
+    // list is only rebuilt at the top of an update — so a threat spawned this
+    // frame would be missed and left in the old arena's coordinates.
+    this.pool.refresh();
+    for (const t of this.pool.live) {
+      if (!t.active) continue;
+      t.size = this.arena.px(t.def.radius);
+      t.speed *= k;
+      if (t.state === 'deflected') {
+        // Cartesian is authoritative for a shot in flight, and it has to be
+        // re-based on the *old* centre: the arena moves as well as resizes.
+        t.x = this.arena.cx + (t.x - previous.cx) * k;
+        t.y = this.arena.cy + (t.y - previous.cy) * k;
+        t.vx *= k;
+        t.vy *= k;
+        t.radius = this.arena.radiusOf(t.x, t.y);
+      } else {
+        t.radius *= k;
+        t.x = this.arena.polarX(t.angle, t.radius);
+        t.y = this.arena.polarY(t.angle, t.radius);
+      }
+    }
+    this.pulseRadius *= k;
+  }
+
   // ------------------------------------------------------------- resonance
 
   /**

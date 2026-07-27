@@ -26,7 +26,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 293 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
+| `npm test` | 298 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run resilience` | Boot the build in seven deliberately broken browsers |
@@ -314,7 +314,7 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **293 unit tests** across gacha guarantees, combat mechanics, the Resonance
+- **298 unit tests** across gacha guarantees, combat mechanics, the Resonance
   draft, the wallet and save migration, daily objectives, clip capture
   decisions, the texture contract, and the engine primitives. The gacha suite
   asserts every published guarantee, including the 50/50 and its make-good; the
@@ -339,7 +339,8 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
   renders the share card, follows a challenge link and checks the run uses the
   challenger's seed. Fails on any console error.
 - **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
-  monitor and fails on content wider than the viewport.
+  monitor and fails on content wider than the viewport — and resizes the window
+  mid-run to check nothing in flight is stranded inside the shield by it.
 - **`node tools/soak.mjs [seconds]`** plays continuously for several minutes —
   through escalation, boss fights, drafts, deaths and restarts — sampling heap,
   texture cache, live entities and frame rate, and fails on a leak or on a game

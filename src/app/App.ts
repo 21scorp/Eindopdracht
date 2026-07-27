@@ -141,7 +141,12 @@ export class App {
     this.syncSettings();
 
     this.renderer.onResize((view) => {
-      this.session.arena.update(view);
+      // Everything in flight is stored in pixels against the old arena, so the
+      // session has to be told how much the arena moved, not just that it did.
+      const a = this.session.arena;
+      const previous = { shieldR: a.shieldR, cx: a.cx, cy: a.cy };
+      a.update(view);
+      if (this.mode === 'playing') this.session.rescale(previous);
     });
 
     this.session.events.on('runEnd', ({ stats }) => this.handleRunEnd(stats));

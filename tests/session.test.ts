@@ -714,6 +714,75 @@ describe('starting over', () => {
   });
 });
 
+describe('resizing the arena mid-run', () => {
+  const BIG = { width: 1440, height: 900, cx: 720, cy: 450, scale: 1, minSide: 900, portrait: false };
+
+  it('keeps an incoming threat exactly where it was relative to the shield', () => {
+    const s = makeSession();
+    const t = place(s, 'orb', 0.4, 1.6);
+    const before = t.radius / s.arena.shieldR;
+
+    const previous = { shieldR: s.arena.shieldR, cx: s.arena.cx, cy: s.arena.cy };
+    s.arena.update(BIG);
+    s.rescale(previous);
+
+    expect(t.radius / s.arena.shieldR).toBeCloseTo(before, 3);
+    // The bug this guards: growing the window used to leave live threats
+    // *inside* the shield, past the band that can block them.
+    expect(t.radius).toBeGreaterThan(s.arena.shieldR);
+    expect(t.x).toBeCloseTo(s.arena.polarX(t.angle, t.radius), 3);
+  });
+
+  it('keeps a shot in flight on the same relative course', () => {
+    const s = makeSession();
+    s.shieldAngle = 0;
+    s.shieldTarget = 0;
+    const t = place(s, 'orb', 0, 1.02);
+    advance(s, STEP * 3);
+    expect(t.state).toBe('deflected');
+    const beforeR = t.radius / s.arena.shieldR;
+    const beforeSpeed = Math.hypot(t.vx, t.vy) / s.arena.shieldR;
+
+    const previous = { shieldR: s.arena.shieldR, cx: s.arena.cx, cy: s.arena.cy };
+    s.arena.update(BIG);
+    s.rescale(previous);
+
+    expect(t.radius / s.arena.shieldR).toBeCloseTo(beforeR, 2);
+    expect(Math.hypot(t.vx, t.vy) / s.arena.shieldR).toBeCloseTo(beforeSpeed, 2);
+  });
+
+  it('rescales approach speed, so a resize does not change the pace', () => {
+    const s = makeSession();
+    const t = place(s, 'orb', 0, 2);
+    const beforeSeconds = (t.radius - s.arena.shieldR) / t.speed;
+
+    const previous = { shieldR: s.arena.shieldR, cx: s.arena.cx, cy: s.arena.cy };
+    s.arena.update(BIG);
+    s.rescale(previous);
+
+    expect((t.radius - s.arena.shieldR) / t.speed).toBeCloseTo(beforeSeconds, 2);
+  });
+
+  it('does nothing when the arena did not actually change', () => {
+    const s = makeSession();
+    const t = place(s, 'orb', 0.4, 1.6);
+    const before = { r: t.radius, x: t.x, speed: t.speed };
+    s.rescale({ shieldR: s.arena.shieldR, cx: s.arena.cx, cy: s.arena.cy });
+    expect(t.radius).toBe(before.r);
+    expect(t.x).toBe(before.x);
+    expect(t.speed).toBe(before.speed);
+  });
+
+  it('survives a nonsense previous radius rather than sending everything to infinity', () => {
+    const s = makeSession();
+    const t = place(s, 'orb', 0.4, 1.6);
+    const before = t.radius;
+    s.rescale({ shieldR: 0, cx: s.arena.cx, cy: s.arena.cy });
+    expect(t.radius).toBe(before);
+    expect(Number.isFinite(t.x)).toBe(true);
+  });
+});
+
 describe('run statistics', () => {
   it('reports counts that match what happened', () => {
     const session = makeSession();
