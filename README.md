@@ -26,7 +26,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 298 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
+| `npm test` | 303 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run resilience` | Boot the build in seven deliberately broken browsers |
@@ -43,7 +43,9 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | `node tools/icons.mjs` | Regenerate the app icons |
 
 No backend. No accounts. Save data lives in `localStorage` and can be exported
-as a code from Settings.
+as a code from Settings. Open the game in two tabs and the one that earns
+something first keeps the account; the other stops saving and says so, because
+a stale tab left open from yesterday must not be able to erase today.
 
 ---
 
@@ -314,7 +316,7 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **298 unit tests** across gacha guarantees, combat mechanics, the Resonance
+- **303 unit tests** across gacha guarantees, combat mechanics, the Resonance
   draft, the wallet and save migration, daily objectives, clip capture
   decisions, the texture contract, and the engine primitives. The gacha suite
   asserts every published guarantee, including the 50/50 and its make-good; the

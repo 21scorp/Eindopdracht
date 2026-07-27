@@ -19,6 +19,11 @@ export interface StoreOptions<T> {
   migrations?: Record<number, Migration>;
   /** Called after load so the game can repair or clamp fields. */
   validate?: (data: T) => T;
+  /**
+   * Called once when another tab is found to have written this key since we
+   * loaded it. This store stops persisting at that point — see `flush`.
+   */
+  onConflict?: () => void;
 }
 
 interface Envelope {
@@ -50,9 +55,28 @@ export class Store<T> {
   private cache: T;
   private dirty = false;
   private flushHandle: number | null = null;
+  /** `__savedAt` of the record this store is a copy of. */
+  private baseStamp = 0;
+  /**
+   * Set when another tab has written since we loaded.
+   *
+   * The game is single-player with a local save, so there is no merge that is
+   * correct — two tabs each hold a whole account. Last-write-wins is the worst
+   * of the options: a stale tab left open from yesterday would silently erase
+   * today. Ownership goes instead to whichever tab writes first after they
+   * diverge, which is the one the player is actually using — it is the one that
+   * earns something first. The other stops persisting, and the app tells the
+   * player to reload. It still plays; it just no longer speaks for the account.
+   */
+  private stale = false;
 
   constructor(private readonly options: StoreOptions<T>) {
     this.cache = this.load();
+  }
+
+  /** True once another tab has taken ownership of the save. */
+  get isStale(): boolean {
+    return this.stale;
   }
 
   get data(): T {
@@ -91,17 +115,41 @@ export class Store<T> {
       clearTimeout(this.flushHandle);
       this.flushHandle = null;
     }
-    if (!this.dirty) return;
+    if (!this.dirty || this.stale) return;
     this.dirty = false;
+
+    if (this.hasBeenOverwritten()) {
+      this.stale = true;
+      console.warn('[Storage] another tab has written this save; this one has stopped persisting');
+      this.options.onConflict?.();
+      return;
+    }
+
+    const stamp = Date.now();
     const envelope: Envelope = {
       __v: this.options.version,
-      __savedAt: Date.now(),
+      __savedAt: stamp,
       data: this.cache,
     };
     try {
       backend.setItem(this.options.key, JSON.stringify(envelope));
+      this.baseStamp = stamp;
     } catch (err) {
       console.warn('[Storage] write failed', err);
+    }
+  }
+
+  /** Has someone else written this key since we last read or wrote it? */
+  private hasBeenOverwritten(): boolean {
+    try {
+      const raw = backend.getItem(this.options.key);
+      if (!raw) return false;
+      const stamp = (JSON.parse(raw) as Envelope)?.__savedAt;
+      // A clock that went backwards is not another tab, and a save written in
+      // the same millisecond as ours is ours.
+      return typeof stamp === 'number' && stamp > this.baseStamp;
+    } catch {
+      return false;
     }
   }
 
@@ -122,6 +170,7 @@ export class Store<T> {
       return this.options.defaults();
     }
 
+    this.baseStamp = typeof envelope.__savedAt === 'number' ? envelope.__savedAt : 0;
     let version = typeof envelope.__v === 'number' ? envelope.__v : 0;
     let data = envelope.data;
 

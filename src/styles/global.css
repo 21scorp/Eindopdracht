@@ -574,3 +574,34 @@ body {
     transition-duration: 0.001ms !important;
   }
 }
+
+/*
+ * Shown when a second tab has taken over the account. It is a full-width bar
+ * rather than a toast because it does not go away on its own: the tab has
+ * stopped saving, and the player needs to know that for as long as it is true.
+ */
+.displaced {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px calc(16px + var(--safe-right)) calc(14px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  background: rgba(12, 8, 18, 0.96);
+  border-top: 1px solid color-mix(in srgb, var(--parry) 45%, transparent);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.displaced .btn {
+  padding: 8px 18px;
+  font-size: 12px;
+}

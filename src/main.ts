@@ -112,6 +112,23 @@ async function main(): Promise<void> {
   (window as unknown as { aegis: App; aegisData: typeof AEGIS_DATA }).aegis = app;
   (window as unknown as { aegisData: typeof AEGIS_DATA }).aegisData = AEGIS_DATA;
 
+  // If a second tab takes over the account, say so once, plainly, where the
+  // player is looking — a tab that has quietly stopped saving is worse than one
+  // that admits it.
+  app.profile.events.on('displaced', () => {
+    const notice = document.createElement('div');
+    notice.className = 'displaced';
+    notice.setAttribute('role', 'status');
+    notice.textContent = 'This game is open in another tab, which now owns your progress. Reload to continue here.';
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.className = 'btn btn--primary';
+    reload.textContent = 'RELOAD';
+    reload.addEventListener('click', () => location.reload());
+    notice.appendChild(reload);
+    document.body.appendChild(notice);
+  });
+
   registerServiceWorker();
 }
 

@@ -282,6 +282,91 @@ describe('save handling', () => {
 });
 
 describe('storage primitives', () => {
+  /**
+   * Two tabs each hold a whole account, so there is no merge that is correct.
+   * The tab that finds itself behind has to stop saving rather than erase the
+   * one that is ahead: a stale tab left open from yesterday must not be able to
+   * wipe today.
+   */
+  describe('two tabs on one save', () => {
+    const makeStore = (key: string, onConflict?: () => void) =>
+      new Store<{ n: number }>({ key, version: 1, defaults: () => ({ n: 0 }), onConflict });
+
+    it('gives the save to whichever tab writes first after they diverge', () => {
+      // Which is the tab the player is actually using: it is the one that
+      // earns something first.
+      const key = `test.tabs.${Math.random()}`;
+      const a = makeStore(key);
+      const b = makeStore(key);
+
+      b.update((d) => (d.n = 2));
+      b.flush();
+
+      expect(makeStore(key).data.n).toBe(2);
+    });
+
+    it('refuses to let the displaced tab write over it', () => {
+      const key = `test.tabs.${Math.random()}`;
+      let conflicts = 0;
+      const a = makeStore(key, () => conflicts++);
+      const b = makeStore(key);
+
+      b.update((d) => (d.n = 2));
+      b.flush();
+
+      a.update((d) => (d.n = 99));
+      a.flush();
+
+      expect(makeStore(key).data.n).toBe(2);
+      expect(a.isStale).toBe(true);
+      expect(conflicts).toBe(1);
+    });
+
+    it('lets the owning tab go on saving', () => {
+      const key = `test.tabs.${Math.random()}`;
+      let conflicts = 0;
+      const a = makeStore(key);
+      const b = makeStore(key, () => conflicts++);
+
+      for (let i = 1; i <= 4; i++) {
+        b.update((d) => (d.n = i));
+        b.flush();
+      }
+      expect(conflicts).toBe(0);
+      expect(b.isStale).toBe(false);
+      expect(makeStore(key).data.n).toBe(4);
+      void a;
+    });
+
+    it('reports the conflict exactly once, however many writes follow', () => {
+      const key = `test.tabs.${Math.random()}`;
+      let conflicts = 0;
+      const a = makeStore(key, () => conflicts++);
+      const b = makeStore(key);
+      b.update((d) => (d.n = 2));
+      b.flush();
+
+      for (let i = 0; i < 5; i++) {
+        a.update((d) => (d.n = 50 + i));
+        a.flush();
+      }
+      expect(conflicts).toBe(1);
+    });
+
+    it('does not mistake its own writes for another tab', () => {
+      const key = `test.tabs.${Math.random()}`;
+      let conflicts = 0;
+      const a = makeStore(key, () => conflicts++);
+      for (let i = 1; i <= 5; i++) {
+        a.update((d) => (d.n = i));
+        a.flush();
+      }
+      expect(conflicts).toBe(0);
+      expect(a.isStale).toBe(false);
+      expect(makeStore(key).data.n).toBe(5);
+    });
+  });
+
   it('runs migrations in order', () => {
     const key = `test.migrate.${Math.random()}`;
     window.localStorage.setItem(key, JSON.stringify({ __v: 0, __savedAt: 0, data: { n: 1 } }));

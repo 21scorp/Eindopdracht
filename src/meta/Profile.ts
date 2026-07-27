@@ -142,6 +142,8 @@ export type ProfileEvents = {
   equipped: { id: string };
   settings: { settings: Settings };
   streak: { streak: number };
+  /** Another tab has taken over the save; this one no longer persists. */
+  displaced: Record<string, never>;
 };
 
 const LEDGER_LIMIT = 300;
@@ -260,6 +262,7 @@ export class Profile {
       version: SAVE_VERSION,
       defaults: makeDefaults,
       validate: (d) => this.repair(d),
+      onConflict: () => this.events.emit('displaced', {}),
     });
     this.gachaRng = new Rng(this.data.gachaRng);
     this.rollDailyIfNeeded();
@@ -267,6 +270,18 @@ export class Profile {
 
   get data(): ProfileData {
     return this.store.data;
+  }
+
+  /**
+   * True once another tab has written this account since this one loaded it.
+   *
+   * Two tabs each hold a whole account, so there is no merge that is correct.
+   * The tab that finds itself behind stops saving rather than erasing the one
+   * that is ahead — a stale tab left open from yesterday must not be able to
+   * wipe today.
+   */
+  get displaced(): boolean {
+    return this.store.isStale;
   }
 
   /** Clamp and backfill anything a partial save or a bad edit could break. */
