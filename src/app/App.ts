@@ -74,6 +74,9 @@ export class App {
 
   mode: AppMode = 'menu';
 
+  /** True while a run is frozen behind the pause menu. */
+  paused = false;
+
   /** Set while a cinematic owns the canvas. Returns true when it is finished. */
   cinematic: { update(dt: number): void; draw(): void; done: boolean } | null = null;
 
@@ -209,6 +212,15 @@ export class App {
   }
 
   private updatePlaying(dt: number): void {
+    // A paused run is frozen, not merely deaf to input. Everything below the
+    // input block advances the world, so the early return has to come first:
+    // without it the pause menu was a way to lose a run while reading it.
+    if (this.paused) {
+      this.input.drainActions();
+      this.hudCaptured = false;
+      return;
+    }
+
     const simDt = this.camera.isFrozen ? 0 : dt;
 
     if (!this.input.suppressed) {
@@ -344,7 +356,7 @@ export class App {
 
     // After `endFrame`, so the clip carries the finished, composited image —
     // bloom, grain, HUD and all — rather than a bare scene buffer.
-    if (this.mode === 'playing') this.clips.frame();
+    if (this.mode === 'playing' && !this.paused) this.clips.frame();
 
     this.adaptiveQuality(dt);
   }
@@ -408,6 +420,7 @@ export class App {
     this.hud.challengeTarget = this.activeChallenge?.score ?? 0;
 
     this.screens.closeAll();
+    this.paused = false;
     this.clips.discard();
     this.lastClip = Promise.resolve(null);
     this.clipStress = 0;
@@ -429,20 +442,26 @@ export class App {
   }
 
   pause(): void {
-    if (this.mode !== 'playing') return;
+    if (this.mode !== 'playing' || this.paused) return;
+    this.paused = true;
     this.input.suppressed = true;
     this.screens.push('pause');
   }
 
   resume(): void {
     if (this.mode !== 'playing') return;
+    this.paused = false;
     this.screens.closeAll();
     this.input.suppressed = false;
+    // The loop has been accumulating real time behind the menu; without this
+    // the first frame back would step the simulation by however long the menu
+    // was open.
     this.loop.resetClock();
   }
 
   abandonRun(): void {
     if (this.mode !== 'playing') return;
+    this.paused = false;
     this.session.end();
   }
 

@@ -91,6 +91,23 @@ try {
   await page.waitForTimeout(2200);
   await shot('02-play-early');
 
+  // A paused run must be *frozen*, not merely deaf to input. This regressed
+  // once already: the menu suppressed input but the world kept advancing, so
+  // reading the pause screen could cost you the run.
+  log('checking the pause menu freezes the run');
+  await page.evaluate(() => window.aegis.pause());
+  const pausedAt = await page.evaluate(() => window.aegis.session.elapsed);
+  await page.waitForTimeout(900);
+  const stillAt = await page.evaluate(() => window.aegis.session.elapsed);
+  await shot('02b-paused');
+  if (stillAt !== pausedAt) {
+    throw new Error(`the simulation advanced ${(stillAt - pausedAt).toFixed(2)}s behind the pause menu`);
+  }
+  await page.evaluate(() => window.aegis.resume());
+  await page.waitForTimeout(300);
+  const resumed = await page.evaluate(() => window.aegis.session.elapsed);
+  if (resumed <= pausedAt) throw new Error('the run did not resume');
+
   // Play for real: an "autopilot" that aims at the nearest incoming threat and
   // pulses when a cluster is at the shield radius. It is not a good player, but
   // it exercises every collision path.
