@@ -160,11 +160,30 @@ export class Coach {
 
     this.drawFocus(step, session, a);
 
-    // Card sits high, clear of the arena and clear of the thumb.
-    const cardW = Math.min(view.width - unit * 0.1, unit * 0.86);
-    const cardH = unit * 0.2;
-    const x = view.cx - cardW / 2;
-    const y = Math.max(unit * 0.14, view.cy - session.arena.shieldR - cardH - unit * 0.14);
+    // Where the card fits depends on the shape of the screen. In portrait there
+    // is a band above the arena; in landscape the arena nearly fills the height,
+    // so the card goes bottom-left where nothing else lives — the pulse button
+    // is centred and the Ultimate is on the right.
+    const landscape = view.width > view.height * 1.15;
+    const pad = Math.max(16, unit * 0.045);
+    const cardW = landscape
+      ? Math.min(view.width * 0.4, unit * 0.62)
+      : Math.min(view.width - unit * 0.1, unit * 0.86);
+    // The card is sized from the text, not the other way round. Guessing a
+    // height means a hint that wraps to one more line than expected gets its
+    // last word clipped, which is exactly the hint a new player needed.
+    const titleSize = unit * 0.038;
+    const bodySize = unit * 0.028;
+    const lineHeight = bodySize * 1.32;
+    const innerPad = unit * 0.032;
+    ctx.font = `500 ${bodySize}px ${FONT_STACK}`;
+    const lines = wrapLines(ctx, step.body, cardW - innerPad * 2.4);
+    const cardH = innerPad * 2 + titleSize * 1.25 + lines.length * lineHeight;
+
+    const x = landscape ? pad : view.cx - cardW / 2;
+    const y = landscape
+      ? view.height - cardH - pad - unit * 0.13
+      : Math.max(unit * 0.17, view.cy - session.arena.shieldR - cardH - unit * 0.08);
 
     ctx.save();
     ctx.globalAlpha = a;
@@ -178,22 +197,24 @@ export class Coach {
 
     // Accent bar down the leading edge.
     ctx.fillStyle = alpha(COLORS.parry, 0.9);
-    roundRect(ctx, x, y + cardH * 0.22, unit * 0.007, cardH * 0.56, unit * 0.004);
+    roundRect(ctx, x, y + cardH * 0.2, unit * 0.007, cardH * 0.6, unit * 0.004);
     ctx.fill();
 
-    const padX = x + unit * 0.045;
+    const padX = x + innerPad * 1.4;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
 
-    ctx.font = `800 ${unit * 0.038}px ${FONT_STACK}`;
+    ctx.font = `800 ${titleSize}px ${FONT_STACK}`;
     ctx.letterSpacing = `${unit * 0.004}px`;
     ctx.fillStyle = COLORS.parry;
-    ctx.fillText(step.title, padX, y + cardH * 0.36);
+    ctx.fillText(step.title, padX, y + innerPad + titleSize * 0.86);
     ctx.letterSpacing = '0px';
 
-    ctx.font = `500 ${unit * 0.028}px ${FONT_STACK}`;
+    ctx.font = `500 ${bodySize}px ${FONT_STACK}`;
     ctx.fillStyle = COLORS.textDim;
-    wrapText(ctx, step.body, padX, y + cardH * 0.58, cardW - unit * 0.09, unit * 0.036);
+    lines.forEach((line, i) => {
+      ctx.fillText(line, padX, y + innerPad + titleSize * 1.25 + (i + 0.78) * lineHeight);
+    });
 
     ctx.restore();
   }
@@ -263,29 +284,26 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-/** Naive word wrap. Fine for two short lines of hint text. */
-function wrapText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
-): void {
+/**
+ * Naive word wrap, returning the lines rather than drawing them, so the caller
+ * can size a container before committing to a layout. Assumes the font is
+ * already set on the context.
+ */
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(' ');
+  const lines: string[] = [];
   let line = '';
-  let cursorY = y;
   for (const word of words) {
     const candidate = line ? `${line} ${word}` : word;
     if (ctx.measureText(candidate).width > maxWidth && line) {
-      ctx.fillText(line, x, cursorY);
+      lines.push(line);
       line = word;
-      cursorY += lineHeight;
     } else {
       line = candidate;
     }
   }
-  if (line) ctx.fillText(line, x, cursorY);
+  if (line) lines.push(line);
+  return lines;
 }
 
 export { lighten, clamp01 };

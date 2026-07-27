@@ -17,6 +17,7 @@ import { clamp } from '../core/math';
 import { Renderer, type Quality } from '../render/Renderer';
 import { ParticleSystem } from '../render/Particles';
 import { Camera } from '../render/Camera';
+import { DebugOverlay } from '../render/DebugOverlay';
 import { textures } from '../render/TextureStore';
 import { registerProceduralArt } from '../render/procgen';
 import { GUARDIANS, getGuardian } from '../data/guardians';
@@ -65,6 +66,7 @@ export class App {
   readonly loop: Loop;
   readonly audio: GameAudio;
   readonly coach: Coach;
+  readonly debug: DebugOverlay;
 
   mode: AppMode = 'menu';
 
@@ -109,6 +111,7 @@ export class App {
     this.vfx = new Vfx(this.session, this.particles, this.camera, this.renderer);
     this.hud = new Hud(this.renderer, textures);
     this.coach = new Coach(this.renderer);
+    this.debug = new DebugOverlay(this.renderer);
     this.screens = new ScreenStack(uiRoot);
 
     this.audio = new GameAudio(audio);
@@ -274,6 +277,18 @@ export class App {
 
     this.camera.apply(r);
     r.composite();
+
+    // After the composite, so the readout is not itself blurred and shaken.
+    this.debug.sample(dt);
+    this.debug.draw({
+      fps: this.loop.fps,
+      quality: this.renderer.quality,
+      entities: this.session.pool.live.length,
+      particles: this.particles.count,
+      textures: textures.stats.generated,
+      atlas: textures.atlasLoaded,
+    });
+
     r.endFrame();
 
     this.adaptiveQuality(dt);
@@ -464,6 +479,7 @@ export class App {
     this.renderer.effectScale = s.reducedFlash ? 0.28 : 1;
     this.hud.mirrored = s.leftHanded;
     haptics.enabled = s.haptics;
+    this.debug.enabled = s.showFps;
     audio.setVolumes(s.music, s.sfx);
     this.applyQualitySetting();
   }

@@ -44,8 +44,14 @@ export class SettingsScreen extends Screen {
         this.app.profile.updateSettings({ reducedFlash: v });
         this.app.syncSettings();
       }, 'Dims full-screen flashes and chromatic split on big hits.'),
-      this.toggle('Left-handed HUD', s.leftHanded, (v) => this.app.profile.updateSettings({ leftHanded: v }), 'Mirrors the pulse and ultimate buttons.'),
-      this.toggle('Haptics', s.haptics, (v) => this.app.profile.updateSettings({ haptics: v })),
+      this.toggle('Left-handed HUD', s.leftHanded, (v) => {
+        this.app.profile.updateSettings({ leftHanded: v });
+        this.app.syncSettings();
+      }, 'Mirrors the pulse and ultimate buttons.'),
+      this.toggle('Haptics', s.haptics, (v) => {
+        this.app.profile.updateSettings({ haptics: v });
+        this.app.syncSettings();
+      }),
 
       sectionTitle('Audio'),
       this.slider('Music', s.music, 0, 1, 0.05, (v) => this.app.profile.updateSettings({ music: v })),
@@ -67,7 +73,10 @@ export class SettingsScreen extends Screen {
           this.refresh();
         },
       ),
-      this.toggle('Show FPS', s.showFps, (v) => this.app.profile.updateSettings({ showFps: v })),
+      this.toggle('Show FPS', s.showFps, (v) => {
+        this.app.profile.updateSettings({ showFps: v });
+        this.app.syncSettings();
+      }, 'Frame rate and a rolling frame-time graph, bottom right.'),
 
       sectionTitle('Account'),
       h(

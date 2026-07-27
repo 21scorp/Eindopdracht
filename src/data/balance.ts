@@ -17,6 +17,8 @@ export const ARENA = {
   spawnMargin: 70,
   /** Deflected threats are cleaned up past this multiple of the screen edge. */
   despawnFactor: 1.4,
+  /** How elongated the spawn rectangle may get before it is clamped. */
+  maxSpawnAspect: 1.9,
 } as const;
 
 export const SCORING = {

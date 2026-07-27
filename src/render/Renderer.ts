@@ -143,6 +143,15 @@ export class Renderer {
     if (this.sceneCanvas) this.resize();
   }
 
+  /**
+   * The presented canvas, for anything that must sit *outside* the post chain —
+   * a debug readout should not bloom, shake or aberrate, because then it is
+   * measuring itself.
+   */
+  get overlayCtx(): CanvasRenderingContext2D {
+    return this.displayCtx;
+  }
+
   get maxDpr(): number {
     return this.quality === 'low' ? 1.25 : this.quality === 'medium' ? 1.75 : 2;
   }

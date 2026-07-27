@@ -36,8 +36,18 @@ export class Arena {
     this.nexusR = view.minSide * ARENA.nexusRadius;
     this.shieldR = view.minSide * ARENA.shieldRadius;
     this.shieldHalfThickness = (view.minSide * ARENA.shieldThickness) / 2;
-    this.halfW = view.width / 2 + ARENA.spawnMargin;
-    this.halfH = view.height / 2 + ARENA.spawnMargin;
+    // Clamp how elongated the spawn rectangle can get. On a 21:9 monitor the
+    // untruncated rectangle puts side spawns more than twice as far out as top
+    // spawns, so those threats have to cross the screen at double the pixel
+    // speed to arrive on time — correct, but it reads as two different games
+    // depending on the angle. Threats scale in as they appear, so entering
+    // slightly inside the edge materialises rather than pops.
+    const halfW = view.width / 2 + ARENA.spawnMargin;
+    const halfH = view.height / 2 + ARENA.spawnMargin;
+    const shorter = Math.min(halfW, halfH);
+    const limit = shorter * ARENA.maxSpawnAspect;
+    this.halfW = Math.min(halfW, limit);
+    this.halfH = Math.min(halfH, limit);
     const corner = Math.hypot(view.width, view.height) / 2;
     this.spawnR = corner + ARENA.spawnMargin;
     this.despawnR = this.spawnR * ARENA.despawnFactor;

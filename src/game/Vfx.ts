@@ -511,9 +511,16 @@ export class Vfx {
     const a = Math.min(1 - Math.pow(outT, 1.8), 1 - Math.pow(1 - inT, 3));
     if (a <= 0.01) return;
 
-    // Sit clear of the arena so the banner never covers an incoming threat.
-    const y = this.cy - Math.max(this.unit * 0.44, this.session.arena.shieldR * 1.42);
-    const size = this.unit * 0.062;
+    const view = this.renderer.view;
+    // Smaller in landscape: there is no clear band above the arena on a wide
+    // screen, so the banner has to overlap it and should be brief and light
+    // rather than large and opaque.
+    const landscape = view.width > view.height * 1.15;
+    const size = this.unit * (landscape ? 0.046 : 0.062);
+    // Clear of the arena, but never up in the score.
+    const aboveArena = this.cy - this.session.arena.shieldR - size * 1.4;
+    const belowScore = view.minSide * 0.045 + view.minSide * 0.11 + size;
+    const y = Math.max(belowScore, Math.min(aboveArena, this.cy - this.unit * 0.28));
     const scale = 1 + (1 - Math.pow(1 - inT, 3)) * 0.08 + outT * 0.1;
 
     ctx.save();
