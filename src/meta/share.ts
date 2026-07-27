@@ -307,9 +307,11 @@ export async function shareRun(app: App, stats: RunStats): Promise<'share' | 'cl
 
   if (navigator.clipboard && 'ClipboardItem' in window) {
     try {
-      await navigator.clipboard.write([
+      await withTimeout(
+        navigator.clipboard.write([
         new ClipboardItem({ 'image/png': blob, 'text/plain': new Blob([text], { type: 'text/plain' }) }),
-      ]);
+        ]),
+      );
       return 'clipboard';
     } catch {
       // fall through to download
@@ -318,7 +320,7 @@ export async function shareRun(app: App, stats: RunStats): Promise<'share' | 'cl
 
   // Last resort: the image downloads and the link goes to the clipboard, so the
   // player still has both halves of the post.
-  await navigator.clipboard?.writeText(text).catch(() => {});
+  await withTimeout(navigator.clipboard?.writeText(text)).catch(() => {});
 
   const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -327,6 +329,23 @@ export async function shareRun(app: App, stats: RunStats): Promise<'share' | 'cl
   a.click();
   setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
   return 'download';
+}
+
+/**
+ * Never let the clipboard hold the share hostage.
+ *
+ * `navigator.clipboard.write` requires document focus, and when it does not
+ * have it Chromium can leave the promise pending rather than rejecting — which
+ * strands the whole share behind an await that never settles, with the button
+ * disabled and nothing on screen. A share that falls back to a download is a
+ * fine outcome; a share that does nothing at all is not.
+ */
+function withTimeout<T>(promise: Promise<T> | undefined, ms = 1200): Promise<T | void> {
+  if (!promise) return Promise.resolve();
+  return Promise.race([
+    promise,
+    new Promise<void>((_, reject) => setTimeout(() => reject(new Error('clipboard timed out')), ms)),
+  ]);
 }
 
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {

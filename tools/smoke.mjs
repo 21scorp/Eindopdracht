@@ -467,6 +467,13 @@ try {
   });
   console.log('  share path:', shareResult);
   if (shareResult === 'no-button') throw new Error('results screen has no share button');
+
+  // The share must end somewhere the player can see: a share sheet, the
+  // clipboard, or a download. A silent SHARE button is the same as a broken one.
+  await page.waitForTimeout(2500);
+  const shareToast = await page.evaluate(() => document.querySelector('.toast')?.textContent ?? '');
+  console.log('  share result:', JSON.stringify(shareToast));
+  if (!shareToast) throw new Error('the share button produced no visible result');
   await shot('13-share');
 
   const finalStats = await page.evaluate(() => window.aegis.lastRun?.stats ?? null);
