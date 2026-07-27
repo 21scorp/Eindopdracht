@@ -83,6 +83,8 @@ export class Coach {
   private visible = false;
   private age = 0;
   private fade = 0;
+  /** Set while something louder owns the same band of screen. */
+  suppressed = false;
   private finished = false;
   private onFinish?: () => void;
 
@@ -116,6 +118,18 @@ export class Coach {
   update(dt: number, session: GameSession): void {
     if (!this.enabled || this.finished) {
       this.fade = Math.max(0, this.fade - dt * 4);
+      return;
+    }
+
+    // Yield to a banner. On a tall screen there is one clear band above the
+    // arena and both of these want it, so on a tablet the hint card sat
+    // squarely on top of "ULTIMATE READY" and neither could be read. The banner
+    // wins because it lasts two seconds and the hint has all run to be seen;
+    // the timer keeps running underneath, so a hint is never *extended* by
+    // having been hidden.
+    if (this.suppressed) {
+      this.fade = Math.max(0, this.fade - dt * 5);
+      if (this.visible) this.age += dt;
       return;
     }
 

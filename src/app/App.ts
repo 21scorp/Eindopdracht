@@ -271,6 +271,7 @@ export class App {
     this.vfx.update(dt);
     this.vfx.ambient(simDt);
     this.hud.update(dt, this.session);
+    this.coach.suppressed = this.vfx.bannerVisible;
     this.coach.update(dt, this.session);
     this.audio.update();
 

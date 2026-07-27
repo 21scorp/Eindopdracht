@@ -49,6 +49,11 @@ export class Vfx {
   /** A short-lived big banner in the middle of the screen ("WAVE 7", "OVERDRIVE"). */
   private banner = { text: '', sub: '', age: 0, life: 0, color: COLORS.aegis };
 
+  /** True while a banner owns the band above the arena. */
+  get bannerVisible(): boolean {
+    return this.banner.life > 0;
+  }
+
   constructor(
     private readonly session: GameSession,
     private readonly particles: ParticleSystem,
@@ -544,7 +549,10 @@ export class Vfx {
     const size = this.unit * (landscape ? 0.046 : 0.062);
     // Clear of the arena, but never up in the score.
     const aboveArena = this.cy - this.session.arena.shieldR - size * 1.4;
-    const belowScore = view.minSide * 0.045 + view.minSide * 0.11 + size;
+    // Clear of the *multiplier chip* under the score, not just of the score:
+    // the banner's translucent bar extends above its text, and at 0.11 it sat
+    // straight across the chip on a wide screen.
+    const belowScore = view.minSide * 0.045 + view.minSide * 0.15 + size;
     const y = Math.max(belowScore, Math.min(aboveArena, this.cy - this.unit * 0.28));
     const scale = 1 + (1 - Math.pow(1 - inT, 3)) * 0.08 + outT * 0.1;
 
