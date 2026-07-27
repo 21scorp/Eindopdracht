@@ -93,6 +93,8 @@ export class Vfx {
     on('waveStart', (e) => this.onWaveStart(e.wave, e.boss));
     on('waveClear', (e) => this.onWaveClear(e.wave, e.bonus));
     on('bossSpawn', () => this.showBanner('WARDEN', 'incoming', COLORS.mythic, 2.2));
+    on('heraldShot', (e) => this.onHeraldShot(e.x, e.y, e.angle));
+    on('bossEnraged', () => this.showBanner('WARDEN ENRAGED', 'it is not slowing down', COLORS.threat, 1.8));
     on('bossKilled', (e) => this.onBossKilled(e.x, e.y));
     on('ultimateReady', () => this.showBanner('ULTIMATE READY', 'two-finger tap', COLORS.ultimate, 1.4));
     on('ultimateFired', () => this.onUltimate());
@@ -248,6 +250,29 @@ export class Vfx {
       behind: true,
       glow: 0.2,
     });
+  }
+
+  /**
+   * A Herald firing.
+   *
+   * Small and directional on purpose: the muzzle flash points inward along the
+   * shot's path so the eye is dragged from the launcher to the thing that is
+   * now on its way, which is the only warning the player gets.
+   */
+  private onHeraldShot(x: number, y: number, angle: number): void {
+    this.particles.burst(x, y, 8, {
+      texture: 'fx/spark',
+      tint: '#59F2C8',
+      life: 0.3,
+      size: this.unit * 0.012,
+      endSize: 0.1,
+      speed: this.unit * 0.32,
+      angle: angle + Math.PI,
+      spread: 0.5,
+      drag: 0.08,
+      stretch: 2.2,
+    });
+    this.ringFlash(x, y, this.unit * 0.07, '#59F2C8', 0.34);
   }
 
   private onDamage(x: number, y: number, fatal: boolean): void {

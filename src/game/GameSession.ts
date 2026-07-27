@@ -33,7 +33,7 @@ import {
   type RunMods,
 } from '../data/resonance';
 import { TAU, angleDistance, clamp, clamp01, dampAngle, normalizeAngle } from '../core/math';
-import { DIFFICULTY, FEEL, PULSE, SCORING, SHIELD } from '../data/balance';
+import { BOSS, DIFFICULTY, FEEL, PULSE, SCORING, SHIELD } from '../data/balance';
 import { THREATS, type ThreatDef } from '../data/threats';
 import { BASE_STATS, scaleStats, type Guardian, type GuardianStats, type UltimateId } from '../data/guardians';
 import { Arena } from './Arena';
@@ -159,6 +159,7 @@ export class GameSession {
 
   private rng: Rng;
   private bossAttackTimer = 0;
+  private bossEnraged = false;
   private lastStandFired = false;
 
   constructor(seed = String(Date.now())) {
@@ -231,6 +232,7 @@ export class GameSession {
     this.elapsed = 0;
     this.counters = { blocks: 0, perfects: 0, parries: 0, chains: 0, kills: 0, bossKills: 0, ults: 0 };
     this.bossAttackTimer = 0;
+    this.bossEnraged = false;
     this.lastStandFired = false;
 
     this.pool.clear();
@@ -656,10 +658,56 @@ export class GameSession {
     return { hit: false, perfect: false };
   }
 
+  /** True while a siege threat is parked at its firing radius. */
+  private siegeHolding(t: Threat): boolean {
+    const siege = t.def.siege;
+    if (!siege) return false;
+    return t.siegeShots < siege.shots && t.radius <= this.arena.shieldR * siege.holdRadius;
+  }
+
+  /**
+   * The Herald's whole fight.
+   *
+   * It walks in, stops at a radius the shield physically cannot reach, and
+   * shells the nexus on a timer. The player has exactly one answer — the pulse
+   * ring, whose maximum reach is set just past the hold radius — which is the
+   * point of the archetype: it turns the pulse from a panic button into a way
+   * of touching something out there. Once it has fired its shots it commits and
+   * dives in fast, so ignoring it is a cost, never a stalemate.
+   */
+  private updateSiege(t: Threat, dt: number): void {
+    const siege = t.def.siege;
+    if (!siege) return;
+    t.angle += t.swirl * dt * 0.35;
+
+    if (!this.siegeHolding(t)) {
+      // Committing: everything it had left goes into the charge.
+      if (t.siegeShots >= siege.shots) t.speed = this.approachSpeed(t.def, t.angle, 1.9);
+      return;
+    }
+
+    t.siegeTimer -= dt;
+    if (t.siegeTimer > 0) return;
+    t.siegeTimer = siege.interval;
+    t.siegeShots++;
+
+    const dart = THREATS[siege.dart];
+    const spawned = this.spawnAt(dart, t.angle, t.radius - t.size * 0.6, siege.dartSpeed, 1);
+    if (spawned) {
+      spawned.scale = 1;
+      // Darts score as the Herald's, not as a free Lancer: a Herald that fires
+      // three of them should not also be a score piñata.
+      spawned.scoreMult = dart.scoreMult * 0.5;
+      this.events.emit('heraldShot', { x: t.x, y: t.y, angle: t.angle });
+    }
+  }
+
   private moveIncoming(t: Threat, dt: number): void {
     const arena = this.arena;
     const push = t.bounce > 0 ? t.bounce * arena.px(0.4) : 0;
-    t.radius -= (t.speed - push) * dt;
+    // A Herald holding its firing position must not drift inward, so the
+    // approach is skipped for as long as it is still shelling.
+    if (!this.siegeHolding(t)) t.radius -= (t.speed - push) * dt;
 
     switch (t.def.motion) {
       case 'spiral':
@@ -675,6 +723,9 @@ export class GameSession {
       }
       case 'drift':
         t.angle += t.swirl * dt * 0.5;
+        break;
+      case 'siege':
+        this.updateSiege(t, dt);
         break;
       case 'straight':
         break;
@@ -1150,13 +1201,26 @@ export class GameSession {
       this.bossAttackTimer = 1.4;
       return;
     }
+    // Enrage. A boss whose behaviour never changes is a health bar with a
+    // sprite on it: the fight has the same shape at 5% as it did at 100%, so
+    // the last third is the least interesting part of the longest fight in the
+    // game. Below a third of its health the Warden fires nearly twice as often,
+    // in a wider fan, and drifts faster — the same fight, turned up.
+    const enraged = boss.hp <= boss.maxHp * BOSS.enrageAt;
+    if (enraged && !this.bossEnraged) {
+      this.bossEnraged = true;
+      boss.swirl *= BOSS.enrageSwirl;
+      this.events.emit('bossEnraged', { threat: boss });
+    }
+
     this.bossAttackTimer -= dt;
     if (this.bossAttackTimer > 0) return;
-    this.bossAttackTimer = clamp(2.6 - this.director.wave * 0.05, 1.1, 2.6);
+    const cadence = clamp(2.6 - this.director.wave * 0.05, 1.1, 2.6);
+    this.bossAttackTimer = enraged ? cadence * BOSS.enrageCadence : cadence;
 
     // The Warden fires a short arc of orbs from its own position.
-    const count = 3;
-    const spread = 0.5;
+    const count = enraged ? 5 : 3;
+    const spread = enraged ? 1.15 : 0.5;
     for (let i = 0; i < count; i++) {
       const a = boss.angle + (i - (count - 1) / 2) * (spread / count);
       this.spawnAt(THREATS.orb, a, Math.max(boss.radius - boss.size, this.arena.shieldR * 1.3), 1.15, 1);

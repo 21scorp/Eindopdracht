@@ -454,6 +454,142 @@ describe('wave director', () => {
   });
 });
 
+describe('the Herald', () => {
+  const SIEGE = THREATS.herald.siege!;
+
+  /** Put a Herald just outside its hold radius and let it walk in. */
+  function placeHerald(s: GameSession) {
+    const t = place(s, 'herald', 0, SIEGE.holdRadius + 0.35);
+    t.speed = s.arena.shieldR * 0.6;
+    return t;
+  }
+
+  it('stops at a radius the shield cannot reach', () => {
+    const s = makeSession();
+    const h = placeHerald(s);
+    advance(s, 2);
+    expect(h.active).toBe(true);
+    const hold = s.arena.shieldR * SIEGE.holdRadius;
+    expect(h.radius).toBeLessThanOrEqual(hold + 1);
+    // Outside the shield band, so a plain block can never touch it.
+    expect(h.radius).toBeGreaterThan(s.arena.shieldR + h.size + s.arena.shieldHalfThickness);
+  });
+
+  it('sits inside the pulse ring, which is the whole point of it', () => {
+    const s = makeSession();
+    const h = placeHerald(s);
+    advance(s, 2);
+    // The pulse peaks a little past the shield and is lethal across a band.
+    const reach = s.arena.shieldR * 1.06 + s.arena.shieldR * 0.18;
+    expect(h.radius).toBeLessThan(reach);
+  });
+
+  it('shells the nexus on a timer while it holds', () => {
+    const s = makeSession();
+    let shots = 0;
+    s.events.on('heraldShot', () => shots++);
+    placeHerald(s);
+    advance(s, 2 + SIEGE.interval * 1.5);
+    expect(shots).toBeGreaterThanOrEqual(1);
+    expect(shots).toBeLessThanOrEqual(SIEGE.shots);
+  });
+
+  it('fires a bounded number of shots and then commits', () => {
+    const s = makeSession();
+    let shots = 0;
+    s.events.on('heraldShot', () => shots++);
+    const h = placeHerald(s);
+    advance(s, 2 + SIEGE.interval * (SIEGE.shots + 2));
+    expect(shots).toBe(SIEGE.shots);
+    // Committed: it is now inside where it was parked, or already gone.
+    expect(!h.active || h.radius < s.arena.shieldR * SIEGE.holdRadius).toBe(true);
+  });
+
+  it('cannot stalemate a run by holding forever', () => {
+    const s = makeSession();
+    const h = placeHerald(s);
+    advance(s, 30);
+    expect(!h.active || h.radius < s.arena.shieldR).toBe(true);
+  });
+
+  it('scores its darts as its own rather than as free Lancers', () => {
+    const s = makeSession();
+    // Sampled one step after the first shot: the pool's live list is rebuilt at
+    // the top of an update, and a dart is fast enough to have reached the
+    // shield if the test waits any longer than that.
+    let fired = false;
+    s.events.on('heraldShot', () => {
+      fired = true;
+    });
+    placeHerald(s);
+    for (let i = 0; i < 2000 && !fired; i++) s.update(STEP);
+    expect(fired).toBe(true);
+    s.update(STEP);
+
+    const darts = s.pool.live.filter((t) => t.kind === 'lancer');
+    expect(darts.length).toBeGreaterThan(0);
+    expect(darts[0]!.scoreMult).toBeLessThan(THREATS.lancer.scoreMult);
+  });
+});
+
+describe('the Warden enrage', () => {
+  function placeBoss(s: GameSession) {
+    const t = place(s, 'warden', 0, 1.6);
+    t.speed = 0;
+    t.boss = true;
+    return t;
+  }
+
+  it('does not enrage at full health', () => {
+    const s = makeSession();
+    let enraged = 0;
+    s.events.on('bossEnraged', () => enraged++);
+    placeBoss(s);
+    advance(s, 4);
+    expect(enraged).toBe(0);
+  });
+
+  it('announces the turn exactly once', () => {
+    const s = makeSession();
+    let enraged = 0;
+    s.events.on('bossEnraged', () => enraged++);
+    const boss = placeBoss(s);
+    boss.hp = Math.floor(boss.maxHp * 0.2);
+    advance(s, 6);
+    expect(enraged).toBe(1);
+  });
+
+  it('fires more often and wider once enraged', () => {
+    const calm = makeSession();
+    const calmBoss = placeBoss(calm);
+    calmBoss.hp = calmBoss.maxHp;
+    advance(calm, 8);
+    const calmShots = calm.pool.live.filter((t) => t.kind === 'orb').length;
+
+    const hot = makeSession();
+    const hotBoss = placeBoss(hot);
+    hotBoss.hp = Math.floor(hotBoss.maxHp * 0.2);
+    advance(hot, 8);
+    const hotShots = hot.pool.live.filter((t) => t.kind === 'orb').length;
+
+    expect(hotShots).toBeGreaterThan(calmShots);
+  });
+
+  it('forgets it was enraged when a new run starts', () => {
+    const s = makeSession();
+    const boss = placeBoss(s);
+    boss.hp = 1;
+    advance(s, 4);
+    s.start(getGuardian('vane'), 1, 1, 'another');
+    let enraged = 0;
+    s.events.on('bossEnraged', () => enraged++);
+    const fresh = placeBoss(s);
+    fresh.hp = fresh.maxHp;
+    advance(s, 4);
+    expect(enraged).toBe(0);
+  });
+});
+
 describe('run statistics', () => {
   it('reports counts that match what happened', () => {
     const session = makeSession();

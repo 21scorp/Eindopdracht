@@ -10,15 +10,17 @@
  *   SPLITTER  "handle the aftermath"      — spawns children on death
  *   BULWARK   "you cannot block this"     — must be pulsed or chained
  *   SEEKER    "your gap is where I go"    — tracks the shield's blind side
+ *   HERALD    "you cannot reach me"       — holds outside the shield and shells
+ *                                            the nexus; only the pulse gets there
  *   WARDEN    boss                        — armoured, sheds a ring of orbs
  *
  * `cost` is the wave-budget price. `weight` biases random selection once the
  * archetype has unlocked.
  */
 
-export type ThreatKind = 'orb' | 'lancer' | 'splitter' | 'bulwark' | 'seeker' | 'warden';
+export type ThreatKind = 'orb' | 'lancer' | 'splitter' | 'bulwark' | 'seeker' | 'herald' | 'warden';
 
-export type ThreatMotion = 'straight' | 'spiral' | 'track' | 'drift';
+export type ThreatMotion = 'straight' | 'spiral' | 'track' | 'drift' | 'siege';
 
 export interface ThreatDef {
   kind: ThreatKind;
@@ -50,6 +52,13 @@ export interface ThreatDef {
   armoured?: boolean;
   /** Children spawned when destroyed. */
   splitInto?: { kind: ThreatKind; count: number; speedMult: number };
+  /**
+   * Siege behaviour: hold at a radius the shield cannot reach and shell the
+   * nexus, then commit. `holdRadius` is a multiple of the shield radius and is
+   * deliberately inside the pulse ring's maximum reach — the whole point of the
+   * archetype is that the pulse is the answer.
+   */
+  siege?: { holdRadius: number; shots: number; interval: number; dart: ThreatKind; dartSpeed: number };
   /** Boss flag: bigger, has a health bar, changes the music. */
   boss?: boolean;
   /** Display name for the kill feed and tutorial. */
@@ -134,6 +143,22 @@ export const THREATS: Record<ThreatKind, ThreatDef> = {
     damage: 1,
     label: 'Seeker',
   },
+  herald: {
+    kind: 'herald',
+    texture: 'threat/herald',
+    radius: 0.024,
+    travelTime: 5.2,
+    hp: 1,
+    cost: 3.4,
+    weight: 34,
+    unlockWave: 10,
+    motion: 'siege',
+    swirl: 0.16,
+    scoreMult: 2.4,
+    damage: 1,
+    siege: { holdRadius: 1.16, shots: 3, interval: 1.5, dart: 'lancer', dartSpeed: 1.15 },
+    label: 'Herald',
+  },
   warden: {
     kind: 'warden',
     texture: 'threat/warden',
@@ -164,7 +189,16 @@ export function availableThreats(wave: number): ThreatDef[] {
  * Spawn patterns. The director picks one, then fills it with archetypes it can
  * afford. Patterns are what make waves feel authored rather than random.
  */
-export type PatternId = 'single' | 'volley' | 'ring' | 'spiral' | 'pincer' | 'cluster' | 'sweep';
+export type PatternId =
+  | 'single'
+  | 'volley'
+  | 'ring'
+  | 'spiral'
+  | 'pincer'
+  | 'cluster'
+  | 'sweep'
+  | 'column'
+  | 'lattice';
 
 export interface PatternDef {
   id: PatternId;
@@ -191,6 +225,12 @@ export const PATTERNS: readonly PatternDef[] = [
   { id: 'sweep', count: 5, spread: 1.6, stagger: 0.14, costMult: 0.88, unlockWave: 6, weight: 50, homogeneous: true },
   { id: 'spiral', count: 6, spread: Math.PI * 2, stagger: 0.11, costMult: 0.82, unlockWave: 8, weight: 45 },
   { id: 'ring', count: 8, spread: Math.PI * 2, stagger: 0, costMult: 0.78, unlockWave: 11, weight: 34, homogeneous: true },
+  // A long single-file line from one bearing: the answer is to hold still,
+  // which is the opposite of what every other pattern rewards.
+  { id: 'column', count: 5, spread: 0.12, stagger: 0.34, costMult: 0.92, unlockWave: 7, weight: 44, homogeneous: true },
+  // Two opposed volleys, offset in time — you have to leave one side to be hit
+  // by the pulse while the shield answers the other.
+  { id: 'lattice', count: 6, spread: Math.PI, stagger: 0.22, costMult: 0.85, unlockWave: 13, weight: 30 },
 ];
 
 export function availablePatterns(wave: number): PatternDef[] {

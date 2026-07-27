@@ -25,7 +25,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 208 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
+| `npm test` | 218 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
@@ -62,11 +62,20 @@ the big scores come from, and why a good defensive turn snowballs.
 
 ### The pressure
 
-Six threat archetypes, each asking a different question. Orbs test coverage,
+Seven threat archetypes, each asking a different question. Orbs test coverage,
 Lancers test speed, Splitters test the aftermath, Bulwarks cannot be blocked
-head-on, Seekers steer toward whichever side you are *not* covering, and the
-Warden — the boss on every fifth wave — is armoured, fires its own volleys, and
-sheds a ring of orbs when it falls.
+head-on, Seekers steer toward whichever side you are *not* covering, and
+Heralds stop *outside* your shield and shell the nexus from there — the pulse
+ring is the only thing that reaches that far, which turns it from a panic button
+into a way of touching something out of reach. A Herald always commits after
+three shots, so ignoring it is a cost and never a stalemate.
+
+The Warden — the boss on every fifth wave — is armoured, fires its own volleys,
+and sheds a ring of orbs when it falls. Below a third of its health it
+**enrages**: nearly double the rate of fire, a much wider fan, and faster drift.
+A boss whose behaviour never changes is a health bar with a sprite on it, and
+the last third of the longest fight in the game should not be its least
+interesting.
 
 Combo multiplies everything, up to 12x. At 30 combo you enter **Overdrive** and
 the whole arena turns gold at double score. Taking damage breaks the chain — in
@@ -227,8 +236,8 @@ Current shape:
 | Skill | Median wave | Median run | Met a Warden |
 | --- | --- | --- | --- |
 | novice | 8 | 60s | 100% |
-| average | 15 | 115s | 100% |
-| expert | 20 | 149s | 100% |
+| average | 15 | 104s | 100% |
+| expert | 22 | 164s | 100% |
 
 An average run earns ~630 Cores, which is a summon every three runs and a
 ten-pull every thirty. The core and XP rates were halved when the draft landed:
@@ -257,7 +266,7 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **208 unit tests** across gacha guarantees, combat mechanics, the Resonance
+- **218 unit tests** across gacha guarantees, combat mechanics, the Resonance
   draft, the wallet and save migration, daily objectives, clip capture
   decisions, the texture contract, and the engine primitives. The gacha suite
   asserts every published guarantee, including the 50/50 and its make-good; the

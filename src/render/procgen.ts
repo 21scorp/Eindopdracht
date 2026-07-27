@@ -427,6 +427,49 @@ function threatSeeker(size = 80): HTMLCanvasElement {
   return c;
 }
 
+/**
+ * HERALD — the threat that never arrives.
+ *
+ * It has to read as *artillery* the instant it appears, because the correct
+ * answer to it is different from every other silhouette: you cannot block it,
+ * you have to reach it. A forward-swept trident nose over an open ring, so the
+ * shape says "this is pointing at you from over there".
+ */
+function threatHerald(size = 88): HTMLCanvasElement {
+  const { c, ctx } = canvas(size);
+  const r = size / 2;
+  const hue = '#59F2C8';
+  ctx.translate(r, r);
+  radialGlow(ctx, 0, 0, r * 0.95, hue, 0.42, 2.6);
+
+  // Open launch ring.
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.5, Math.PI * 0.34, Math.PI * 1.66);
+  ctx.strokeStyle = alpha(hue, 0.9);
+  ctx.lineWidth = size * 0.075;
+  ctx.stroke();
+
+  // Three forward prongs. Threats face +X before rotation, so this points the
+  // business end the same way every other archetype does.
+  for (const off of [-0.34, 0, 0.34]) {
+    ctx.save();
+    ctx.rotate(off);
+    ctx.beginPath();
+    ctx.moveTo(r * 0.24, -size * 0.028);
+    ctx.lineTo(r * 0.92, 0);
+    ctx.lineTo(r * 0.24, size * 0.028);
+    ctx.closePath();
+    ctx.fillStyle = off === 0 ? lighten(hue, 0.45) : hue;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Charged core.
+  ctx.globalCompositeOperation = 'lighter';
+  radialGlow(ctx, -r * 0.06, 0, r * 0.3, '#EAFFF8', 0.95, 1.7);
+  return c;
+}
+
 function threatWarden(size = 320): HTMLCanvasElement {
   const { c, ctx } = canvas(size);
   const r = size / 2;
@@ -860,6 +903,7 @@ export function registerProceduralArt(store: TextureStore, guardians: readonly G
     'threat/splitter': () => threatSplitter(84),
     'threat/bulwark': () => threatBulwark(92),
     'threat/seeker': () => threatSeeker(80),
+    'threat/herald': () => threatHerald(88),
     'threat/warden': () => threatWarden(320),
 
     // FX.

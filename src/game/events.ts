@@ -52,6 +52,7 @@ export type GameEvents = {
   bossSpawn: { threat: Threat };
   bossDamaged: { threat: Threat; hp: number; maxHp: number };
   bossKilled: { threat: Threat; x: number; y: number };
+  bossEnraged: { threat: Threat };
   damage: { integrity: number; x: number; y: number; fatal: boolean };
   comboBreak: { combo: number };
   comboMilestone: { combo: number; multiplier: number };
@@ -67,5 +68,6 @@ export type GameEvents = {
   runEnd: { stats: RunStats };
   lastStand: Record<string, never>;
   secondWind: Record<string, never>;
+  heraldShot: { x: number; y: number; angle: number };
   resonanceTaken: { id: string; name: string; tier: string };
 };

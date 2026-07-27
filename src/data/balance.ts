@@ -139,6 +139,15 @@ export const DIFFICULTY = {
  * per pull, or thirty for a ten-pull — a few days of casual play, before daily
  * rewards and account levels are counted.
  */
+export const BOSS = {
+  /** Fraction of maximum health below which the Warden enrages. */
+  enrageAt: 0.34,
+  /** Multiplier on the time between volleys once enraged (lower is faster). */
+  enrageCadence: 0.55,
+  /** Multiplier on its orbital drift once enraged. */
+  enrageSwirl: 1.9,
+} as const;
+
 export const REWARDS = {
   /**
    * Cores earned per point of score.

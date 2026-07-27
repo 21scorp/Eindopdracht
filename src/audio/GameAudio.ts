@@ -51,9 +51,17 @@ export class GameAudio {
     on('waveClear', () => this.onWaveClear());
     on('bossSpawn', () => this.onBossSpawn());
     on('bossKilled', () => this.onBossKilled());
+    on('bossEnraged', () => this.onBossEnraged());
     on('ultimateReady', () => this.onUltimateReady());
     on('ultimateFired', () => this.onUltimateFired());
     on('lastStand', () => this.onLastStand());
+    // A Herald firing is the one sound that has to cut through a busy wave: it
+    // is the only threat whose damage arrives from somewhere the player is not
+    // already looking.
+    on('heraldShot', () => {
+      this.engine.tone({ freq: 880, freqTo: 300, type: 'sawtooth', attack: 0.003, decay: 0.2, gain: 0.055, filter: 2600, send: 0.35 });
+      this.engine.noise({ duration: 0.16, filter: 2200, filterTo: 700, type: 'bandpass', gain: 0.045 });
+    });
     on('runStart', () => {
       this.comboStep = 0;
       this.music.overdrive = false;
@@ -330,6 +338,16 @@ export class GameAudio {
     });
     this.engine.noise({ duration: 0.7, filter: 300, filterTo: 9000, gain: 0.14, send: 0.5 });
     haptics.pattern([40, 30, 70]);
+  }
+
+  /** The turn. Low, loud and slightly detuned — the fight got worse. */
+  private onBossEnraged(): void {
+    for (const f of [58, 87, 116.5]) {
+      this.engine.tone({ freq: f, type: 'sawtooth', attack: 0.01, decay: 1.3, gain: 0.075, filter: 620, send: 0.5 });
+    }
+    this.engine.noise({ duration: 1.1, filter: 180, filterTo: 1800, type: 'lowpass', gain: 0.08, send: 0.7 });
+    this.engine.duck(0.35, 0.8);
+    haptics.tap(30);
   }
 
   private onLastStand(): void {

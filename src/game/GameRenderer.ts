@@ -634,6 +634,8 @@ export function threatColor(t: Threat): string {
       return '#5C7CFF';
     case 'seeker':
       return '#FFC24D';
+    case 'herald':
+      return '#59F2C8';
     case 'warden':
       return COLORS.mythic;
   }

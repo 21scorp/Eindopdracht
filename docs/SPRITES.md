@@ -113,6 +113,7 @@ colours). Draw those **white or near-white** so the tint reads.
 | `threat/splitter` | 84 × 84 | Something that will break apart | Spins as it travels. |
 | `threat/bulwark` | 92 × 92 | Armour on the leading edge | The front plate must read as "you cannot block this head-on". Its +X side is the armoured side. |
 | `threat/seeker` | 80 × 80 | Something aiming at you | Steers toward your blind side. |
+| `threat/herald` | 88 × 88 | Artillery | Never reaches the shield — it parks outside it and fires inward. The silhouette has to say "pointing at you from over there", because the correct answer to it is different from every other threat. |
 | `threat/warden` | 320 × 320 | The boss | Gets a health arc drawn around it at 1.32x its collision radius, so leave the outer edge readable. |
 
 Threat colours are declared in `game/GameRenderer.ts:threatColor` and used for
@@ -148,6 +149,22 @@ Reused constantly and often tinted. Draw these **white**.
 | `ui/shard` | 96 × 96 | Upgrade material. |
 | `ui/star` | 64 × 64 | Filled rarity star. |
 | `ui/star-empty` | 64 × 64 | Unfilled star. Same shape, desaturated. |
+
+### Resonance sigils — the in-run draft
+
+One per card category, not one per card. Eight keys, all 96 × 96, all drawn on
+the same dark hex plate so a row of them reads as a set at 20px.
+
+| Key | Reads as |
+| --- | --- |
+| `res/arc` | Shield shape |
+| `res/turn` | Shield tracking |
+| `res/pulse` | Pulse |
+| `res/perfect` | Precision |
+| `res/chain` | Deflection and chains |
+| `res/nexus` | Survival |
+| `res/score` | Score and economy |
+| `res/ult` | Ultimate |
 
 ### Guardians — two frames each
 

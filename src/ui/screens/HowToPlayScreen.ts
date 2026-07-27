@@ -162,6 +162,8 @@ function threatBlurb(kind: string): string {
       return 'Armoured. A plain block bounces off it — pulse it, perfect it, or chain into it.';
     case 'seeker':
       return 'Steers toward whichever side your shield is not covering.';
+    case 'herald':
+      return 'Stops outside your shield and shells the nexus. You cannot block it — your pulse is the only thing that reaches that far.';
     case 'warden':
       return 'Boss. Heavily armoured, fires its own volleys, and sheds a ring of orbs when it falls.';
     default:

@@ -73,6 +73,10 @@ export interface Threat {
 
   /** Trail emission accumulator, so trails are frame-rate independent. */
   trailTimer: number;
+
+  /** Siege archetypes: seconds until the next shot, and shots already fired. */
+  siegeTimer: number;
+  siegeShots: number;
 }
 
 let nextId = 1;
@@ -108,6 +112,8 @@ function makeThreat(def: ThreatDef): Threat {
     generation: 0,
     boss: false,
     trailTimer: 0,
+    siegeTimer: 0,
+    siegeShots: 0,
   };
 }
 
@@ -157,6 +163,8 @@ export class ThreatPool {
       t.hitCooldown = 0;
       t.scoreMult = def.scoreMult;
       t.generation = 0;
+      t.siegeTimer = 0;
+      t.siegeShots = 0;
       t.boss = def.boss ?? false;
       t.trailTimer = 0;
       return t;

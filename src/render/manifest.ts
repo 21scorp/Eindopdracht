@@ -74,6 +74,7 @@ const THREAT_SIZES: Record<string, [number, number]> = {
   splitter: [84, 84],
   bulwark: [92, 92],
   seeker: [80, 80],
+  herald: [88, 88],
   warden: [320, 320],
 };
 
