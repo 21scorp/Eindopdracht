@@ -42,7 +42,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | Command | What it does |
 | --- | --- |
 | `node tools/viewports.mjs` | Every screen at six sizes, failing on any overflow |
-| `node tools/layout.mjs` | Every screen at three widths, failing on anything that clips its own text |
+| `node tools/layout.mjs` | Every screen at three widths, then again under a rich account, failing on anything that clips or overlaps |
 | `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
 | `node tools/soak.mjs 180` | Play for three minutes and watch for leaks |
 | `node tools/a11y.mjs` | Names, targets, contrast and focus on every screen |
@@ -362,13 +362,23 @@ where they were.
   monitor and fails on content wider than the viewport — and resizes the window
   mid-run to check nothing in flight is stranded inside the shield by it.
 - **`node tools/layout.mjs`** checks the other half of that: not content wider
-  than the window, but content *cut off by its own container*. `overflow:
-  hidden` sets a flex item's automatic minimum size to zero, so a panel inside a
+  than the window, but content ruined *by its own container*. `overflow: hidden`
+  sets a flex item's automatic minimum size to zero, so a panel inside a
   scrolling column is the one child flex is willing to squash — and it squashes
   by slicing a line of text in half instead of by scrolling. The rates screen
   was shipping exactly that: the entire "what this costs in practice" panel, the
   most load-bearing honesty on the screen, was rendering as one clipped headline
-  with its bottom half missing.
+  with its bottom half missing. It also catches the version that clips nothing —
+  a child squeezed below its own contents so they spill out and paint on top of
+  whatever comes next, which is what the home screen was doing to its own stats
+  row and play button at 320x568.
+
+  Then it does all of it again under load. Menus get laid out against a fresh
+  account — three-digit score, short name, empty roster — and the screens that
+  actually break are the ones a good run produces: a nine-figure score, a
+  four-digit combo, six Resonance cards, a ten-pull of Mythics, a name nobody
+  would pick. Those are only reachable by playing, which is precisely why nobody
+  looks at them at 320px, or sideways.
 - **`node tools/soak.mjs [seconds]`** plays continuously for several minutes —
   through escalation, boss fights, drafts, deaths and restarts — sampling heap,
   texture cache, live entities and frame rate, and fails on a leak or on a game

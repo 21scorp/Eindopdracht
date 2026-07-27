@@ -157,7 +157,15 @@ for (const vp of WIDTHS) {
 
 // ---------------------------------------------------- run outcomes, under load
 
-for (const vp of WIDTHS.slice(0, 2)) {
+const LOADED = [
+  { name: 'small', width: 320, height: 568 },
+  { name: 'phone', width: 412, height: 892 },
+  // Held sideways: the shape with the least height, and the one a results
+  // screen full of nine-figure numbers has the least room to live in.
+  { name: 'landscape', width: 892, height: 412 },
+];
+
+for (const vp of LOADED) {
   const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, deviceScaleFactor: 2 });
   const page = await context.newPage();
   await page.goto(BASE, { waitUntil: 'networkidle' });
