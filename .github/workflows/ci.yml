@@ -48,7 +48,7 @@ jobs:
           retention-days: 7
 
   browser:
-    name: Browser smoke test
+    name: Browser checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +70,9 @@ jobs:
             sleep 1
           done
           node tools/smoke.mjs
+          node tools/viewports.mjs
+          node tools/a11y.mjs
+          node tools/resilience.mjs
 
       - uses: actions/upload-artifact@v4
         if: always()
