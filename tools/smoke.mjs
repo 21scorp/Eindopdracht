@@ -109,6 +109,20 @@ try {
   const resumed = await page.evaluate(() => window.aegis.session.elapsed);
   if (resumed <= pausedAt) throw new Error('the run did not resume');
 
+  // Escape has to work both ways. It reaches the pause screen through the DOM
+  // handler while also queueing a `back` action on the input layer, and the
+  // next frame used to read that as "pause" and put the menu straight back up —
+  // so a keyboard player could pause and never leave.
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(400);
+  const escPaused = await page.evaluate(() => window.aegis.paused);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
+  const escResumed = await page.evaluate(() => window.aegis.paused);
+  console.log('  escape toggles pause:', JSON.stringify({ escPaused, escResumed }));
+  if (!escPaused) throw new Error('Escape did not pause the run');
+  if (escResumed) throw new Error('Escape did not resume the run');
+
   // --- the Resonance draft --------------------------------------------------
   // Driven from the wave-clear event rather than by playing to wave 2, so the
   // check is about the draft and not about how well the autopilot happens to

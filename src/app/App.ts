@@ -528,6 +528,11 @@ export class App {
     this.clips.resumeRecording();
     this.screens.closeAll();
     this.input.suppressed = false;
+    // Escape reaches here through the DOM handler, but the same keypress also
+    // queued a `back` action on the input layer — which the next frame would
+    // read as "pause" and put the menu straight back up. Whatever was pressed
+    // to get here has already been acted on.
+    this.input.drainActions();
     // The loop has been accumulating real time behind the menu; without this
     // the first frame back would step the simulation by however long the menu
     // was open.
