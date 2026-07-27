@@ -58,6 +58,17 @@ export class ResonanceScreen extends Screen {
 
     clear(this.title);
     this.title.append(h('h2', { class: 'h-display', text: 'CHOOSE A RESONANCE' }));
+    // Once, ever. The first draft is the only one where "what is this and what
+    // happens to it" is a real question; after that the sentence is noise
+    // between the player and three cards they already understand.
+    if (!this.app.profile.hasSeenTip('resonance')) {
+      this.title.append(
+        h('p', {
+          class: 't-body resonance__explain',
+          text: 'You keep it for the rest of the run and lose it when the run ends. There is no wrong answer.',
+        }),
+      );
+    }
 
     clear(this.cards);
     offer.forEach((id, i) => {
@@ -105,6 +116,7 @@ export class ResonanceScreen extends Screen {
   private choose(id: string): void {
     if (this.choosing) return;
     this.choosing = true;
+    this.app.profile.markTipSeen('resonance');
     this.app.takeResonance(id);
   }
 

@@ -54,11 +54,16 @@ export interface ThreatDef {
   splitInto?: { kind: ThreatKind; count: number; speedMult: number };
   /**
    * Siege behaviour: hold at a radius the shield cannot reach and shell the
-   * nexus, then commit. `holdRadius` is a multiple of the shield radius and is
-   * deliberately inside the pulse ring's maximum reach — the whole point of the
-   * archetype is that the pulse is the answer.
+   * nexus, then commit.
+   *
+   * `holdBias` positions it *between* the two reaches rather than at a fixed
+   * multiple of the shield radius — 0 is right against the shield's outer edge,
+   * 1 is at the very limit of the pulse ring. A hand-tuned multiple happened to
+   * leave five pixels of clearance on a 320px phone; interpolating guarantees
+   * the archetype's whole premise, that the shield cannot reach it and the
+   * pulse can, on every screen there is.
    */
-  siege?: { holdRadius: number; shots: number; interval: number; dart: ThreatKind; dartSpeed: number };
+  siege?: { holdBias: number; shots: number; interval: number; dart: ThreatKind; dartSpeed: number };
   /** Boss flag: bigger, has a health bar, changes the music. */
   boss?: boolean;
   /** Display name for the kill feed and tutorial. */
@@ -156,7 +161,7 @@ export const THREATS: Record<ThreatKind, ThreatDef> = {
     swirl: 0.16,
     scoreMult: 2.4,
     damage: 1,
-    siege: { holdRadius: 1.16, shots: 3, interval: 1.5, dart: 'lancer', dartSpeed: 1.15 },
+    siege: { holdBias: 0.5, shots: 3, interval: 1.5, dart: 'lancer', dartSpeed: 1.15 },
     label: 'Herald',
   },
   warden: {

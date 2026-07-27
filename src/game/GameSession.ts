@@ -484,7 +484,7 @@ export class GameSession {
     // Ease-out so the ring is slowest — and therefore most forgiving — right at
     // the shield radius where the interesting timing lives.
     const eased = 1 - Math.pow(1 - t, 2.1);
-    this.pulseRadius = this.arena.nexusR + (this.arena.shieldR - this.arena.nexusR) * eased * 1.06;
+    this.pulseRadius = this.arena.nexusR + (this.arena.shieldR - this.arena.nexusR) * eased * PULSE.maxExtension;
 
     if (this.pulseTimer >= window) {
       this.pulseActive = false;
@@ -703,11 +703,25 @@ export class GameSession {
     return { hit: false, perfect: false };
   }
 
+  /**
+   * Where a siege threat parks.
+   *
+   * Interpolated between the outer edge of the shield band and the outer edge
+   * of the pulse ring at full extension, so it is out of one reach and inside
+   * the other by construction rather than by a constant that happened to work
+   * on the screen it was tuned on.
+   */
+  siegeHoldRadius(t: Threat): number {
+    const contact = this.arena.shieldR + t.size + this.arena.shieldHalfThickness;
+    const reach = this.arena.shieldR * (PULSE.maxExtension + PULSE.bandHalfWidth);
+    return contact + (reach - contact) * (t.def.siege?.holdBias ?? 0.5);
+  }
+
   /** True while a siege threat is parked at its firing radius. */
   private siegeHolding(t: Threat): boolean {
     const siege = t.def.siege;
     if (!siege) return false;
-    return t.siegeShots < siege.shots && t.radius <= this.arena.shieldR * siege.holdRadius;
+    return t.siegeShots < siege.shots && t.radius <= this.siegeHoldRadius(t);
   }
 
   /**

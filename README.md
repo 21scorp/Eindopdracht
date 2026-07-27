@@ -13,6 +13,7 @@ game is really about: pulling for Guardians.
   <img src="docs/media/arena.png" alt="The arena mid-wave: a shield arc around the nexus, threats converging from every angle" width="270" />
   <img src="docs/media/overdrive.png" alt="Overdrive: the whole arena turns gold at double score" width="270" />
   <img src="docs/media/warden.png" alt="A Warden going down in a shower of shards" width="270" />
+  <img src="docs/media/resonance.png" alt="The Resonance draft: three upgrade cards over the frozen arena" width="270" />
 </p>
 
 ```bash

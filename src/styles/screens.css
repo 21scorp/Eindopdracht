@@ -2562,3 +2562,11 @@
   text-align: center;
   color: var(--text-dim);
 }
+
+.resonance__explain {
+  max-width: 34ch;
+  margin: 4px auto 0;
+  font-size: 13px;
+  color: var(--text-dim);
+  text-wrap: balance;
+}

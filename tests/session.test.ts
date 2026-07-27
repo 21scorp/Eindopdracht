@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { GameSession } from '../src/game/GameSession';
 import { getGuardian } from '../src/data/guardians';
 import { THREATS } from '../src/data/threats';
-import { SCORING } from '../src/data/balance';
+import { PULSE, SCORING } from '../src/data/balance';
 import type { ViewInfo } from '../src/render/Renderer';
 import type { HitQuality } from '../src/game/events';
 
@@ -457,9 +457,9 @@ describe('wave director', () => {
 describe('the Herald', () => {
   const SIEGE = THREATS.herald.siege!;
 
-  /** Put a Herald just outside its hold radius and let it walk in. */
+  /** Put a Herald well outside its hold radius and let it walk in. */
   function placeHerald(s: GameSession) {
-    const t = place(s, 'herald', 0, SIEGE.holdRadius + 0.35);
+    const t = place(s, 'herald', 0, 1.7);
     t.speed = s.arena.shieldR * 0.6;
     return t;
   }
@@ -469,7 +469,7 @@ describe('the Herald', () => {
     const h = placeHerald(s);
     advance(s, 2);
     expect(h.active).toBe(true);
-    const hold = s.arena.shieldR * SIEGE.holdRadius;
+    const hold = s.siegeHoldRadius(h);
     expect(h.radius).toBeLessThanOrEqual(hold + 1);
     // Outside the shield band, so a plain block can never touch it.
     expect(h.radius).toBeGreaterThan(s.arena.shieldR + h.size + s.arena.shieldHalfThickness);
@@ -479,9 +479,35 @@ describe('the Herald', () => {
     const s = makeSession();
     const h = placeHerald(s);
     advance(s, 2);
-    // The pulse peaks a little past the shield and is lethal across a band.
-    const reach = s.arena.shieldR * 1.06 + s.arena.shieldR * 0.18;
+    const reach = s.arena.shieldR * (PULSE.maxExtension + PULSE.bandHalfWidth);
     expect(h.radius).toBeLessThan(reach);
+  });
+
+  it('keeps real clearance on both sides at every screen size', () => {
+    // The archetype's premise is that one reach misses it and the other does
+    // not. A hand-tuned multiple left five pixels of clearance on a small
+    // phone; this asserts the margin is a share of the arena, not a constant.
+    for (const view of [
+      { width: 320, height: 568, minSide: 320 },
+      { width: 412, height: 892, minSide: 412 },
+      { width: 1440, height: 900, minSide: 900 },
+    ]) {
+      const s = new GameSession('clearance');
+      s.arena.update({
+        ...view,
+        cx: view.width / 2,
+        cy: view.height / 2,
+        scale: 1,
+        portrait: view.height > view.width,
+      });
+      s.start(getGuardian('vane'), 1, 1, 'clearance');
+      const h = place(s, 'herald', 0, 1.7);
+      const hold = s.siegeHoldRadius(h);
+      const contact = s.arena.shieldR + h.size + s.arena.shieldHalfThickness;
+      const reach = s.arena.shieldR * (PULSE.maxExtension + PULSE.bandHalfWidth);
+      expect(hold - contact).toBeGreaterThan(s.arena.shieldR * 0.02);
+      expect(reach - hold).toBeGreaterThan(s.arena.shieldR * 0.02);
+    }
   });
 
   it('shells the nexus on a timer while it holds', () => {
@@ -502,7 +528,7 @@ describe('the Herald', () => {
     advance(s, 2 + SIEGE.interval * (SIEGE.shots + 2));
     expect(shots).toBe(SIEGE.shots);
     // Committed: it is now inside where it was parked, or already gone.
-    expect(!h.active || h.radius < s.arena.shieldR * SIEGE.holdRadius).toBe(true);
+    expect(!h.active || h.radius < s.siegeHoldRadius(h)).toBe(true);
   });
 
   it('cannot stalemate a run by holding forever', () => {

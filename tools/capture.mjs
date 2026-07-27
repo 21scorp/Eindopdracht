@@ -98,6 +98,48 @@ const SCENES = [
       for (let i = 0; i < 3; i++) place('splitter', (i / 3) * Math.PI * 2 + 1.1, 'shield', 2.1 + i * 0.2);
     },
   },
+  {
+    // Long enough for the run-start banner to clear; the scene is the subject.
+    name: '07-herald-siege',
+    settle: 1500,
+    build: () => {
+      const s = window.aegis.session;
+      s.score = 214_600;
+      // Below the Overdrive threshold, or the banner covers the arena.
+      s.combo = 18;
+      s.director.wave = 12;
+      // Nothing staged here should be allowed to actually land: a dart hitting
+      // the nexus paints "COMBO LOST" across the middle of the shot.
+      s.invuln = 999;
+      s.shieldTarget = -1.1;
+      s.shieldAngle = -1.1;
+      // Two Heralds parked at their firing radius, mid-volley, with the darts
+      // they have already sent on their way.
+      for (const a of [-1.1, 1.7]) {
+        const h = place('herald', a, 'shield', 1.16);
+        if (h) {
+          h.siegeShots = 1;
+          h.siegeTimer = 9;
+        }
+        place('lancer', a + 0.04, 'shield', 1.06);
+      }
+      for (let i = 0; i < 6; i++) place('orb', (i / 6) * Math.PI * 2 + 0.3, 'shield', 1.5 + (i % 3) * 0.3);
+    },
+  },
+  {
+    name: '08-resonance',
+    settle: 900,
+    build: () => {
+      const app = window.aegis;
+      const s = app.session;
+      s.score = 88_400;
+      s.combo = 24;
+      s.director.wave = 5;
+      for (let i = 0; i < 5; i++) place('orb', (i / 5) * Math.PI * 2, 'shield', 1.9 + (i % 3) * 0.3);
+      for (const id of ['wide-guard', 'chain-reaction']) s.takeResonance(id);
+      s.events.emit('waveClear', { wave: 5, bonus: 0 });
+    },
+  },
 ];
 
 /** Injected into the page: places a threat at a polar position. */
@@ -151,6 +193,7 @@ const MEDIA_SCENES = new Map([
   ['02-busy-arena', 'arena'],
   ['03-overdrive', 'overdrive'],
   ['04-warden', 'warden'],
+  ['08-resonance', 'resonance'],
 ]);
 const selected = MEDIA ? SCENES.filter((s) => MEDIA_SCENES.has(s.name)) : SCENES;
 
