@@ -219,19 +219,29 @@ export class BannerScreen extends Screen {
       onComplete: () => {
         this.app.endCinematic();
         this.pulling = false;
+        detachSkip();
         this.app.screens.replace('pullresult', { granted, bannerId: banner.id });
       },
     });
-    this.app.playCinematic(cinematic);
 
-    // Tapping anywhere skips the spectacle. Never trap a player in an
-    // animation they have already seen a hundred times.
-    const skip = (): void => {
+    // Tapping anywhere skips the spectacle. Never trap a player in an animation
+    // they have already seen a hundred times — the cards are the payoff, and the
+    // build-up is only worth watching while it is still a surprise.
+    const onSkip = (e: Event): void => {
+      e.preventDefault();
       cinematic.skip();
-      window.removeEventListener('pointerdown', skip);
     };
-    window.addEventListener('pointerdown', skip);
-    setTimeout(() => window.removeEventListener('pointerdown', skip), 12_000);
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') onSkip(e);
+    };
+    const detachSkip = (): void => {
+      window.removeEventListener('pointerdown', onSkip);
+      window.removeEventListener('keydown', onKey);
+    };
+    window.addEventListener('pointerdown', onSkip);
+    window.addEventListener('keydown', onKey);
+
+    this.app.playCinematic(cinematic);
   }
 
   override onBack(): boolean {

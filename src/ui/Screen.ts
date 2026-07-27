@@ -124,8 +124,11 @@ export class ScreenStack {
   pop(): void {
     const top = this.stack.pop();
     if (top) this.screens.get(top)?.hide();
-    const next = this.current;
-    if (next && !next.isActive) next.show();
+    // Always re-show, even when the screen underneath stayed visible behind a
+    // translucent overlay. Returning to a screen has to refresh it: claiming a
+    // daily reward and closing the sheet must not leave "DAILY READY" sitting
+    // on the home screen.
+    this.current?.show();
   }
 
   /** Close every screen. Used when gameplay takes over the viewport. */

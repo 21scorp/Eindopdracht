@@ -457,13 +457,14 @@ export class GameSession {
       if (!p.active || p.state !== 'deflected') continue;
       for (const target of live) {
         if (!target.active || target.state !== 'incoming' || target === p) continue;
+        if (target.hitCooldown > 0) continue;
         const dx = target.x - p.x;
         const dy = target.y - p.y;
         // Deflected shots hit with a generous radius: they are energised, and a
         // near miss on a chain reads as a bug rather than as skill.
         const rr = target.size + p.size * 1.6;
         if (dx * dx + dy * dy > rr * rr) continue;
-        this.registerHit(target, 'chain', target.angle);
+        this.resolveContact(target, 'chain', target.angle, DAMAGE.chain);
         // A projectile survives its first chain kill, giving multi-kills room to
         // happen, then expires so it cannot mow down a whole wave alone.
         p.hp -= 1;
@@ -640,51 +641,54 @@ export class GameSession {
 
   // ------------------------------------------------------------- resolution
 
-  private handleShieldContact(t: Threat, perfect: boolean): void {
-    if (this.ult.id === 'overcharge' && this.ult.timer > 0) perfect = true;
-
+  /**
+   * Resolve any contact against a threat, respecting armour.
+   *
+   * Every path that can hurt something goes through here. Chain hits used to
+   * call `registerHit` directly, which skipped the armour branch entirely — so
+   * a single stray deflected shot killed a Bulwark through its plate, and
+   * killed a sixteen-hit Warden outright.
+   */
+  private resolveContact(
+    t: Threat,
+    quality: HitQuality,
+    angle: number,
+    damage: number,
+    opts: { knockback?: number; forceMult?: number } = {},
+  ): void {
     if (t.def.armoured) {
-      // Armour cannot be deflected by the shield, only worn down. It recoils so
-      // the player gets clear feedback that the hit landed.
-      t.hp -= perfect ? DAMAGE.perfect : DAMAGE.block;
+      t.hp -= damage;
       t.flash = 1;
-      t.bounce = 1;
+      t.bounce = opts.knockback ?? 1;
       t.hitCooldown = ARMOUR_HIT_COOLDOWN;
-      t.radius += this.arena.px(0.02);
+      t.radius += this.arena.px(0.02) * (opts.knockback ?? 1);
       if (t.boss) {
         this.events.emit('bossDamaged', { threat: t, hp: Math.max(0, t.hp), maxHp: t.maxHp });
       }
       if (t.hp <= 0) {
-        this.registerHit(t, perfect ? 'perfect' : 'block', t.angle);
+        this.registerHit(t, quality, angle, opts.forceMult ?? 1);
       } else {
         // A landed-but-not-lethal hit still pays a little and keeps the combo alive.
-        this.awardHit(t, perfect ? 'perfect' : 'block', false);
+        this.awardHit(t, quality, false);
       }
       return;
     }
+    this.registerHit(t, quality, angle, opts.forceMult ?? 1);
+  }
 
-    this.registerHit(t, perfect ? 'perfect' : 'block', t.angle);
+  private handleShieldContact(t: Threat, perfect: boolean): void {
+    if (this.ult.id === 'overcharge' && this.ult.timer > 0) perfect = true;
+    const quality = perfect ? 'perfect' : 'block';
+    this.resolveContact(t, quality, t.angle, perfect ? DAMAGE.perfect : DAMAGE.block);
   }
 
   private handlePulseCatch(t: Threat): void {
     this.pulseCaught++;
-    const inner = this.arena.shieldR * PULSE.perfectInner;
-    const perfect = t.radius >= inner;
-
-    if (t.def.armoured) {
-      t.hp -= DAMAGE.parry;
-      t.flash = 1;
-      t.bounce = 1.4;
-      t.hitCooldown = ARMOUR_HIT_COOLDOWN;
-      t.radius += this.arena.px(0.035);
-      if (t.boss) this.events.emit('bossDamaged', { threat: t, hp: Math.max(0, t.hp), maxHp: t.maxHp });
-      if (t.hp <= 0) this.registerHit(t, 'parry', t.angle);
-      else this.awardHit(t, 'parry', false);
-      if (perfect) this.slow(FEEL.parrySlowScale, FEEL.parrySlowDuration);
-      return;
-    }
-
-    this.registerHit(t, 'parry', t.angle, PULSE.knockback);
+    const perfect = t.radius >= this.arena.shieldR * PULSE.perfectInner;
+    this.resolveContact(t, 'parry', t.angle, DAMAGE.parry, {
+      knockback: 1.4,
+      forceMult: PULSE.knockback,
+    });
     if (perfect) this.slow(FEEL.parrySlowScale, FEEL.parrySlowDuration);
   }
 
@@ -999,14 +1003,7 @@ export class GameSession {
       const perpendicular = Math.sin(rel) * t.radius;
       if (Math.abs(perpendicular) > width + t.size) continue;
       if (Math.cos(rel) < 0) continue; // behind the beam origin
-      if (t.def.armoured) {
-        t.hp -= DAMAGE.lance;
-        t.flash = 1;
-        if (t.boss) this.events.emit('bossDamaged', { threat: t, hp: Math.max(0, t.hp), maxHp: t.maxHp });
-        if (t.hp <= 0) this.registerHit(t, 'parry', t.angle);
-      } else {
-        this.registerHit(t, 'parry', t.angle, 1.8);
-      }
+      this.resolveContact(t, 'parry', t.angle, DAMAGE.lance, { forceMult: 1.8 });
     }
   }
 
