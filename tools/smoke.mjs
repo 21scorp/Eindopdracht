@@ -197,6 +197,7 @@ try {
     ['11-settings', 'settings'],
     ['12-profile', 'profile'],
     ['12b-howto', 'howtoplay'],
+    ['12c-quests', 'quests'],
   ]) {
     log(`opening ${screen}`);
     await page.evaluate((s) => {
@@ -229,6 +230,13 @@ try {
 
   const finalStats = await page.evaluate(() => window.aegis.lastRun?.stats ?? null);
   console.log('  run stats:', JSON.stringify(finalStats));
+
+  const quests = await page.evaluate(() =>
+    window.aegis.quests.list().map((q) => ({ id: q.def.id, progress: q.progress, target: q.target })),
+  );
+  console.log('  objectives:', JSON.stringify(quests));
+  if (quests.length !== 3) throw new Error('daily objectives were not rolled');
+  if (quests.every((q) => q.progress === 0)) throw new Error('the run did not advance any objective');
 
   // --- challenge link -------------------------------------------------------
   // The viral loop: a link reproduces the challenger's exact wave sequence.

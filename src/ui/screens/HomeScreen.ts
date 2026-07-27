@@ -21,6 +21,7 @@ export class HomeScreen extends Screen {
   private statsRow!: HTMLElement;
   private levelChip!: HTMLElement;
   private dailyBtn!: HTMLElement;
+  private questBtn!: HTMLElement;
   /** Only auto-open the daily reward once per session, however often we return. */
   private dailyShown = false;
 
@@ -69,6 +70,13 @@ export class HomeScreen extends Screen {
       aria: { label: 'Daily reward' },
     });
 
+    this.questBtn = h('button', {
+      class: 'dailybtn dailybtn--quests',
+      type: 'button',
+      onClick: () => this.app.screens.push('quests'),
+      aria: { label: 'Daily objectives' },
+    });
+
     this.nav = new NavBar([
       { id: 'home', label: 'Home', glyph: '◈', onSelect: () => this.app.screens.replace('home') },
       { id: 'roster', label: 'Roster', glyph: '☰', onSelect: () => this.app.screens.push('roster') },
@@ -85,7 +93,7 @@ export class HomeScreen extends Screen {
     this.root.append(
       header,
       h('div', { class: 'home__body grow' }, this.hero, this.statsRow),
-      h('div', { class: 'home__actions' }, this.dailyBtn, play),
+      h('div', { class: 'home__actions' }, h('div', { class: 'home__chores' }, this.dailyBtn, this.questBtn), play),
       this.nav.root,
     );
   }
@@ -171,6 +179,21 @@ export class HomeScreen extends Screen {
     if (profile.data.daily.streak > 1) {
       this.statsRow.appendChild(statRow('Day streak', `${profile.data.daily.streak}`, true));
     }
+
+    const quests = this.app.quests.list();
+    const claimable = quests.filter((q) => q.complete && !q.claimed).length;
+    const done = quests.filter((q) => q.complete).length;
+    clear(this.questBtn);
+    this.questBtn.classList.toggle('is-ready', claimable > 0);
+    this.questBtn.append(
+      h('span', { class: 'dailybtn__glyph', text: claimable > 0 ? '★' : '☆' }),
+      h(
+        'span',
+        { class: 'col', style: { gap: '0' } },
+        h('span', { class: 'dailybtn__title', text: claimable > 0 ? `${claimable} TO CLAIM` : 'OBJECTIVES' }),
+        h('span', { class: 't-label', text: `${done} of ${quests.length} done` }),
+      ),
+    );
 
     clear(this.dailyBtn);
     const available = profile.dailyAvailable;

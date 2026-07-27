@@ -13,6 +13,7 @@ import { damp } from '../../core/math';
 import { RARITY_STYLE } from '../../render/palette';
 import { getGuardian } from '../../data/guardians';
 import type { App, ChallengeResult, RunRewards } from '../../app/App';
+import type { QuestView } from '../../meta/quests';
 import type { RunStats } from '../../game/events';
 import { Screen } from '../Screen';
 import { statRow, textureImg } from '../components';
@@ -30,6 +31,7 @@ export class ResultsScreen extends Screen {
   private stats: RunStats | null = null;
   private rewards: RunRewards | null = null;
   private challenge: ChallengeResult | null = null;
+  private questsCompleted: QuestView[] = [];
 
   constructor(private readonly app: App) {
     super('results', 'screen screen--overlay results');
@@ -64,11 +66,14 @@ export class ResultsScreen extends Screen {
   }
 
   protected override onEnter(params?: unknown): void {
-    const p = params as { stats: RunStats; rewards: RunRewards; challenge?: ChallengeResult | null } | undefined;
+    const p = params as
+      | { stats: RunStats; rewards: RunRewards; challenge?: ChallengeResult | null; questsCompleted?: QuestView[] }
+      | undefined;
     if (!p) return;
     this.stats = p.stats;
     this.rewards = p.rewards;
     this.challenge = p.challenge ?? null;
+    this.questsCompleted = p.questsCompleted ?? [];
     this.targetScore = p.stats.score;
     this.shownScore = 0;
     this.render();
@@ -156,6 +161,26 @@ export class ResultsScreen extends Screen {
           text: 'Daily core bonus reached — further runs still earn at a reduced rate.',
         }),
       );
+    }
+
+    // Objectives finished by this run, with the claim one tap away.
+    if (this.questsCompleted.length > 0) {
+      const box = h('div', { class: 'results__quests panel' });
+      box.append(h('span', { class: 't-label', text: 'Objective complete' }));
+      for (const q of this.questsCompleted) {
+        box.append(h('p', { class: 'results__quest', text: q.label }));
+      }
+      box.append(
+        button('COLLECT', () => {
+          const n = this.app.quests.claimAll();
+          if (n > 0) {
+            this.app.audio.uiConfirm();
+            this.questsCompleted = [];
+            this.render();
+          }
+        }, { variant: 'primary' }),
+      );
+      this.rewardsEl.after(box);
     }
   }
 

@@ -495,6 +495,14 @@
   overflow-x: auto;
   scrollbar-width: none;
   flex: none;
+  /* Fade the trailing edge so a chip cut off by the scroll reads as "there is
+     more this way" rather than as a clipped layout. */
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+}
+
+.roster__filters > :last-child {
+  margin-right: 24px;
 }
 
 .roster__filters::-webkit-scrollbar {
@@ -544,7 +552,7 @@
 
 .roster__detail {
   flex: none;
-  max-height: 46vh;
+  max-height: 44vh;
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
@@ -553,9 +561,20 @@
   padding: 0 0 14px;
 }
 
+/*
+ * Flex items shrink by default, and this panel is a scrolling column with more
+ * content than height. Without this the portrait — an aspect-ratio box with no
+ * intrinsic height — collapsed to nothing, taking the Guardian's name and
+ * Ultimate text with it.
+ */
+.roster__detail > * {
+  flex: none;
+}
+
 .detail__hero {
   position: relative;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 2 / 1;
+  min-height: 132px;
   overflow: hidden;
 }
 
@@ -605,6 +624,11 @@
   flex-direction: column;
   gap: 4px;
   font-size: 13px;
+  line-height: 1.45;
+}
+
+.detail__ult p {
+  color: var(--text);
 }
 
 .detail__stats {
@@ -2087,4 +2111,110 @@
 .results__margin {
   margin-top: 4px;
   letter-spacing: 0.16em;
+}
+
+/* ------------------------------------------------------------------ quests */
+
+.home__chores {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dailybtn--quests {
+  --parry: var(--heal);
+}
+
+.quests__intro {
+  padding-bottom: 12px;
+  flex: none;
+}
+
+.quests__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  padding-bottom: 12px;
+}
+
+.quest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 13px 15px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: rgba(17, 23, 41, 0.6);
+  flex: none;
+}
+
+.quest.is-complete {
+  border-color: color-mix(in srgb, var(--heal) 45%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--heal) 10%, transparent), rgba(11, 16, 32, 0.7));
+}
+
+.quest.is-claimed {
+  opacity: 0.5;
+}
+
+.quest.is-complete .meter__fill {
+  background: var(--heal);
+}
+
+.quest__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.quest__label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.quest__reward {
+  flex: none;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.quest__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+}
+
+.quest__claim {
+  min-height: 34px;
+  padding: 6px 16px;
+  font-size: 11px;
+}
+
+.quests__actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 10px;
+  flex: none;
+}
+
+.results__quests {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  margin-top: 12px;
+  border-color: color-mix(in srgb, var(--heal) 40%, transparent);
+}
+
+.results__quest {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--heal);
 }

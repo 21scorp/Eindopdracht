@@ -29,6 +29,7 @@ import { Hud } from '../game/Hud';
 import { Coach } from '../game/Coach';
 import type { RunStats } from '../game/events';
 import { Profile } from '../meta/Profile';
+import { QuestTracker, type QuestView } from '../meta/quests';
 import { clearChallengeFromUrl, evaluateChallenge, readChallengeFromUrl, type Challenge } from '../meta/challenge';
 import { ScreenStack } from '../ui/Screen';
 import { audio } from '../audio/AudioEngine';
@@ -67,6 +68,7 @@ export class App {
   readonly audio: GameAudio;
   readonly coach: Coach;
   readonly debug: DebugOverlay;
+  readonly quests: QuestTracker;
 
   mode: AppMode = 'menu';
 
@@ -91,6 +93,7 @@ export class App {
 
   constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.profile = new Profile();
+    this.quests = new QuestTracker(this.profile);
 
     this.renderer = new Renderer(canvas);
     this.applyQualitySetting();
@@ -391,6 +394,9 @@ export class App {
   private handleRunEnd(stats: RunStats): void {
     this.lastRunStats = stats;
     this.lastRunRewards = this.payoutRun(stats);
+    // Quests read the finished run's own stats rather than subscribing to
+    // events, so a system that re-emits one cannot double-count progress.
+    this.lastQuestsCompleted = this.quests.recordRun(stats);
     this.lastChallengeResult = this.activeChallenge
       ? { challenge: this.activeChallenge, ...evaluateChallenge(this.activeChallenge, stats.score) }
       : null;
@@ -401,8 +407,11 @@ export class App {
       stats,
       rewards: this.lastRunRewards,
       challenge: this.lastChallengeResult,
+      questsCompleted: this.lastQuestsCompleted,
     });
   }
+
+  private lastQuestsCompleted: QuestView[] = [];
 
   private lastChallengeResult: ChallengeResult | null = null;
 

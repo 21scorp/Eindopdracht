@@ -25,7 +25,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 134 unit tests (gacha, combat, economy, textures, engine) |
+| `npm test` | 151 unit tests (gacha, combat, economy, quests, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
@@ -72,6 +72,18 @@ Combo multiplies everything, up to 12x. At 30 combo you enter **Overdrive** and
 the whole arena turns gold at double score. Taking damage breaks the chain — in
 Overdrive you keep part of it, because losing a 40-combo to one mistake is how
 you make people stop playing.
+
+### Coming back
+
+A seven-day reward track that *advances* rather than resets — missing a day
+costs that day's reward and nothing else, because a wiped streak is what turns
+a game into an obligation. Alongside it, three daily objectives rolled from
+your account id and the date, so they are stable across reloads without a
+server and different tomorrow without a scheduler.
+
+Every objective is reachable in a good run, and they point at skills rather
+than at time: "land 40 perfects" teaches aiming, "play 20 runs" teaches
+nothing and just occupies an evening.
 
 ### The collection
 
@@ -218,9 +230,10 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **134 unit tests** across gacha guarantees, combat mechanics, the wallet and
-  save migration, the texture contract, and the engine primitives. The gacha
-  suite asserts every published guarantee, including the 50/50 and its make-good.
+- **151 unit tests** across gacha guarantees, combat mechanics, the wallet and
+  save migration, daily objectives, the texture contract, and the engine
+  primitives. The gacha suite asserts every published guarantee, including the
+  50/50 and its make-good; the quest suite asserts a reward can never pay twice.
 - **`npm run balance`** for systemic behaviour over hundreds of runs.
 - **`npm run smoke`** drives a real Chromium at phone size: claims the daily
   reward, plays a run with an autopilot, performs a ten-pull, opens every
@@ -252,8 +265,8 @@ hashed assets are cache-first because the URL is immutable.
 ## Status
 
 Complete and playable end to end: gameplay, progression, collection, summoning,
-shop, daily loop, coaching, challenge links, share card, audio, settings, save
-transfer and offline install.
+shop, daily loop, objectives, coaching, challenge links, share card, audio,
+settings, save transfer and offline install.
 
 Not built yet, and deliberately: a backend, leaderboards, real payments, and the
 sprite art itself.

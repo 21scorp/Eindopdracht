@@ -115,6 +115,10 @@ export interface ProfileData {
   ledger: LedgerEntry[];
   /** Ids of one-time tips the player has already dismissed. */
   seenTips: string[];
+
+  /** Local date the active quest set was rolled for. */
+  questDate: string;
+  quests: Array<{ id: string; progress: number; claimed: boolean }>;
 }
 
 export type ProfileEvents = {
@@ -208,6 +212,8 @@ function makeDefaults(): ProfileData {
     entitlements: {},
     ledger: [],
     seenTips: [],
+    questDate: '',
+    quests: [],
   };
 }
 
@@ -255,6 +261,9 @@ export class Profile {
       owned.copies = Math.max(1, Math.floor(owned.copies || 1));
     }
     if (!d.roster[d.equipped]) d.equipped = Object.keys(d.roster)[0] ?? STARTER_GUARDIAN_ID;
+
+    d.questDate ??= '';
+    if (!Array.isArray(d.quests)) d.quests = [];
 
     d.pity ??= {};
     for (const b of BANNERS) d.pity[b.id] ??= createPityState();
