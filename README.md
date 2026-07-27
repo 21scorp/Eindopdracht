@@ -290,6 +290,19 @@ hashed assets are cache-first because the URL is immutable.
 
 ---
 
+## Deploying
+
+`.github/workflows/deploy.yml` publishes `dist/` to GitHub Pages on every push
+to `main`, running the same type-check, tests and build that CI runs — a green
+CI is a deployable artefact by construction. Enable it once under **Settings →
+Pages → Source → GitHub Actions**; nothing else needs configuring, because
+every URL the game emits is relative (`base: './'`, manifest `scope: './'`), so
+it runs from a project subpath exactly as it does from a domain root.
+
+Any static host works the same way: `npx vite build` and serve `dist/`.
+
+---
+
 ## Status
 
 Complete and playable end to end: gameplay, progression, collection, summoning,

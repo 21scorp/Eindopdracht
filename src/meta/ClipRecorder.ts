@@ -89,13 +89,13 @@ export function chooseSegment(
   return current ?? previous;
 }
 
-/** `aegis-wave12-84200.mp4` — sortable, self-describing, no spaces. */
+/** `aegis-vane-w12-84233.mp4` — sortable, self-describing, no spaces. */
 export function clipFileName(
   stats: { wave: number; score: number; guardianId: string },
   extension: string,
 ): string {
   const slug = stats.guardianId.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  return `prismbreak-${slug}-w${stats.wave}-${Math.round(stats.score)}.${extension}`;
+  return `aegis-${slug}-w${stats.wave}-${Math.round(stats.score)}.${extension}`;
 }
 
 export interface ClipResult {
@@ -124,7 +124,7 @@ const DEFAULTS = {
   bitrate: 4_500_000,
   segmentSeconds: 20,
   minSeconds: 3.5,
-  watermark: 'PRISMBREAK',
+  watermark: 'AEGIS',
 };
 
 /** A canvas capture track, whose `requestFrame` some browsers do not implement. */

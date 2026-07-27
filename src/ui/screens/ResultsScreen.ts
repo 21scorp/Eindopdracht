@@ -154,13 +154,23 @@ export class ResultsScreen extends Screen {
     const stats = this.stats;
     if (!stats) return;
     const name = clipFileName(stats, clip.format.extension);
-    const text = `Wave ${stats.wave}, ${fmt(stats.score)} points. Beat that.`;
+    // The same challenge link the share card carries. A clip is what gets
+    // watched; the link is what turns a viewer into the next run.
+    const { challengeUrl } = await import('../../meta/challenge');
+    const url = challengeUrl({
+      seed: stats.seed,
+      score: stats.score,
+      wave: stats.wave,
+      name: this.app.profile.data.playerName,
+      guardianId: stats.guardianId,
+    });
+    const text = `${fmt(stats.score)} on AEGIS — wave ${stats.wave}, ${stats.maxCombo} combo. Same waves, your turn: ${url}`;
 
     try {
       const file = new File([clip.blob], name, { type: clip.blob.type });
       const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
       if (nav.canShare?.({ files: [file] }) && typeof nav.share === 'function') {
-        await nav.share({ files: [file], text, title: 'Prismbreak' });
+        await nav.share({ files: [file], text, title: 'AEGIS', url });
         this.app.audio.uiConfirm();
         return;
       }
@@ -173,7 +183,17 @@ export class ResultsScreen extends Screen {
     const a = h('a', { href: this.clipUrl ?? '', download: name }) as HTMLAnchorElement;
     a.click();
     this.app.audio.uiConfirm();
-    this.notify('Clip saved to your downloads.');
+
+    // No share sheet means the caption goes nowhere, so put it somewhere: the
+    // clip on its own has no link back to the game.
+    let copied = false;
+    try {
+      await navigator.clipboard?.writeText(text);
+      copied = true;
+    } catch {
+      // Clipboard permission refused. The file still saved, which is the point.
+    }
+    this.notify(copied ? 'Clip saved. The caption and link are on your clipboard.' : 'Clip saved to your downloads.');
   }
 
   private releaseClip(): void {

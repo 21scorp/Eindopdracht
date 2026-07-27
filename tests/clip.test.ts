@@ -97,12 +97,12 @@ describe('picking a segment', () => {
 describe('file names', () => {
   it('describes the run without spaces or surprises', () => {
     expect(clipFileName({ wave: 12, score: 84_233.4, guardianId: 'vane' }, 'mp4')).toBe(
-      'prismbreak-vane-w12-84233.mp4',
+      'aegis-vane-w12-84233.mp4',
     );
   });
 
   it('slugs an id that is not already safe', () => {
-    expect(clipFileName({ wave: 1, score: 0, guardianId: 'Nyx Prime' }, 'webm')).toBe('prismbreak-nyx-prime-w1-0.webm');
+    expect(clipFileName({ wave: 1, score: 0, guardianId: 'Nyx Prime' }, 'webm')).toBe('aegis-nyx-prime-w1-0.webm');
   });
 });
 
