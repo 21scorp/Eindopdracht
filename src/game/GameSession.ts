@@ -35,7 +35,14 @@ import {
 import { TAU, angleDistance, clamp, clamp01, dampAngle, normalizeAngle } from '../core/math';
 import { BOSS, DIFFICULTY, FEEL, PULSE, SCORING, SHIELD } from '../data/balance';
 import { THREATS, type ThreatDef } from '../data/threats';
-import { BASE_STATS, scaleStats, type Guardian, type GuardianStats, type UltimateId } from '../data/guardians';
+import {
+  BASE_STATS,
+  perfectTolerance as perfectToleranceFor,
+  scaleStats,
+  type Guardian,
+  type GuardianStats,
+  type UltimateId,
+} from '../data/guardians';
 import { Arena } from './Arena';
 import { ThreatPool, type Threat } from './Threat';
 import { WaveDirector } from './WaveDirector';
@@ -47,6 +54,30 @@ export type SessionPhase = 'idle' | 'intro' | 'playing' | 'dying' | 'over';
  * Seconds an armoured target is immune after being hit. Long enough that
  * breaking armour takes real time, short enough that it never feels unresponsive.
  */
+/**
+ * How long an instant Ultimate keeps the meter locked.
+ *
+ * NOVA, FRACTURE and SIPHON resolve in a single frame, so without this they
+ * charge *while their own explosion is still on screen*: the board they just
+ * cleared is the easiest board in the game to build combo on. A second of
+ * lockout costs nothing to feel and closes the loop.
+ */
+const INSTANT_ULT_LOCKOUT = 1;
+
+/**
+ * How many links a single chain reaction may run before it stops minting new
+ * projectiles. Four is still a spectacle; unbounded is a game that cannot end.
+ */
+const CHAIN_CASCADE_LIMIT = 3;
+
+/** SIPHON's guard rails. See the case in `applyUltimate`. */
+const SIPHON = {
+  /** Threats it must actually drain for the heal to trigger. */
+  minDrain: 5,
+  /** Integrity it can restore across a whole run. */
+  healBudget: 3,
+} as const;
+
 const ARMOUR_HIT_COOLDOWN = 0.22;
 
 /** Damage dealt to armoured targets by each kind of contact. */
@@ -160,6 +191,7 @@ export class GameSession {
   private rng: Rng;
   private bossAttackTimer = 0;
   private bossEnraged = false;
+  private siphonHealsLeft = SIPHON.healBudget;
   private lastStandFired = false;
 
   constructor(seed = String(Date.now())) {
@@ -233,6 +265,7 @@ export class GameSession {
     this.counters = { blocks: 0, perfects: 0, parries: 0, chains: 0, kills: 0, bossKills: 0, ults: 0 };
     this.bossAttackTimer = 0;
     this.bossEnraged = false;
+    this.siphonHealsLeft = SIPHON.healBudget;
     this.lastStandFired = false;
 
     this.pool.clear();
@@ -567,7 +600,7 @@ export class GameSession {
         // near miss on a chain reads as a bug rather than as skill.
         const rr = target.size + p.size * 1.6;
         if (dx * dx + dy * dy > rr * rr) continue;
-        this.resolveContact(target, 'chain', target.angle, DAMAGE.chain);
+        this.resolveContact(target, 'chain', target.angle, DAMAGE.chain, { chainDepth: p.chainDepth + 1 });
         // A projectile survives its first chain kill, giving multi-kills room to
         // happen, then expires so it cannot mow down a whole wave alone.
         p.hp -= 1;
@@ -631,6 +664,18 @@ export class GameSession {
     }
   }
 
+  /**
+   * The share of the arc that counts as dead centre, for this run.
+   *
+   * Derived from the Guardian's parry window and whatever the draft has done to
+   * it. This is the only reader of that stat: before it existed the number was
+   * printed on every Guardian card and multiplied by a Resonance card, and
+   * changed nothing at all.
+   */
+  private get perfectTolerance(): number {
+    return perfectToleranceFor(this.stats);
+  }
+
   /** Does the shield (or its mirror) cover this angle? */
   private isCovered(angle: number, angRadius: number): { hit: boolean; perfect: boolean } {
     if (this.fullCircle) {
@@ -638,14 +683,14 @@ export class GameSession {
       // pointing at the thing. Granting free perfects for standing still made
       // the two Guardians that have this Ultimate outscore the rest of the
       // roster fifty to one.
-      const perfect = angleDistance(angle, this.shieldAngle) <= (this.stats.arc / 2) * SHIELD.perfectTolerance;
+      const perfect = angleDistance(angle, this.shieldAngle) <= (this.stats.arc / 2) * this.perfectTolerance;
       return { hit: true, perfect };
     }
 
     const check = (centre: number): { hit: boolean; perfect: boolean } => {
       const d = angleDistance(angle, centre);
       const hit = d <= this.arcHalf + SHIELD.forgiveness + angRadius;
-      const perfect = d <= this.arcHalf * SHIELD.perfectTolerance;
+      const perfect = d <= this.arcHalf * this.perfectTolerance;
       return { hit, perfect };
     };
 
@@ -806,7 +851,7 @@ export class GameSession {
     quality: HitQuality,
     angle: number,
     damage: number,
-    opts: { knockback?: number; forceMult?: number } = {},
+    opts: { knockback?: number; forceMult?: number; chainDepth?: number } = {},
   ): void {
     if (t.def.armoured) {
       t.hp -= damage;
@@ -818,14 +863,14 @@ export class GameSession {
         this.events.emit('bossDamaged', { threat: t, hp: Math.max(0, t.hp), maxHp: t.maxHp });
       }
       if (t.hp <= 0) {
-        this.registerHit(t, quality, angle, opts.forceMult ?? 1);
+        this.registerHit(t, quality, angle, opts.forceMult ?? 1, opts.chainDepth ?? 0);
       } else {
         // A landed-but-not-lethal hit still pays a little and keeps the combo alive.
         this.awardHit(t, quality, false);
       }
       return;
     }
-    this.registerHit(t, quality, angle, opts.forceMult ?? 1);
+    this.registerHit(t, quality, angle, opts.forceMult ?? 1, opts.chainDepth ?? 0);
   }
 
   private handleShieldContact(t: Threat, perfect: boolean): void {
@@ -849,11 +894,23 @@ export class GameSession {
    * Convert a threat into a deflected projectile (or kill it outright) and pay
    * out score, combo and Ultimate charge.
    */
-  private registerHit(t: Threat, quality: HitQuality, angle: number, forceMult = 1): void {
+  private registerHit(t: Threat, quality: HitQuality, angle: number, forceMult = 1, chainDepth = 0): void {
     const killed = true;
     this.awardHit(t, quality, killed);
 
     if (t.boss) {
+      this.killThreat(t, false);
+      return;
+    }
+
+    // Past the cascade limit the threat is destroyed rather than turned into
+    // more ammunition. Without this a single parry walks through a whole wave —
+    // every chain kill mints a fresh projectile that mints another — and a
+    // player who can land parries never has to face a wave at all. The harness
+    // found it as one Guardian sitting at the ten-minute cap, alive at wave 62.
+    if (chainDepth > CHAIN_CASCADE_LIMIT + this.mods.chainDepth) {
+      this.counters.kills++;
+      this.events.emit('threatKilled', { threat: t, x: t.x, y: t.y, byUltimate: false });
       this.killThreat(t, false);
       return;
     }
@@ -868,6 +925,7 @@ export class GameSession {
     t.vy = Math.sin(spreadAngle) * speed;
     t.spin = this.rng.signedRange(9);
     t.flash = 1;
+    t.chainDepth = chainDepth;
     // Parried shots pierce one extra target; CHAIN REACTION adds another.
     t.hp = (quality === 'parry' ? 2 : 1) + this.mods.chainDepth;
     this.counters.kills++;
@@ -1040,8 +1098,8 @@ export class GameSession {
 
     switch (id) {
       case 'nova': {
-        this.ult.timer = 0;
-        this.ult.duration = 0;
+        this.ult.timer = INSTANT_ULT_LOCKOUT;
+        this.ult.duration = INSTANT_ULT_LOCKOUT;
         this.clearAll(1);
         break;
       }
@@ -1062,6 +1120,12 @@ export class GameSession {
         this.ult.gatherTimer = 0.95;
         this.ult.duration = 0.95;
         this.ult.timer = 0.95;
+        // The gather is a one-second commit the player cannot act during, and
+        // dragging a wave *inward* puts it closer to the nexus than it started.
+        // Being killed by your own Ultimate's wind-up is not a skill test, and
+        // it is why both Guardians carrying MAGNETIZE sat at the bottom of the
+        // roster comparison.
+        this.invuln = Math.max(this.invuln, 1.15);
         this.ult.gatherX = this.arena.polarX(this.shieldAngle, this.arena.shieldR * 0.78);
         this.ult.gatherY = this.arena.polarY(this.shieldAngle, this.arena.shieldR * 0.78);
         break;
@@ -1085,16 +1149,28 @@ export class GameSession {
         break;
       }
       case 'siphon': {
-        this.ult.timer = 0;
-        this.ult.duration = 0;
-        const healed = Math.min(2, this.maxIntegrity - this.integrity);
-        this.integrity += healed;
-        this.clearAll(1.2);
+        this.ult.timer = INSTANT_ULT_LOCKOUT;
+        this.ult.duration = INSTANT_ULT_LOCKOUT;
+        // The heal is earned and it is finite.
+        //
+        // Unbounded, SIPHON is not an Ultimate, it is immortality: clear the
+        // screen, take a life back, let the combo refill the meter on the
+        // emptiest board in the game, repeat. The harness caught it as one
+        // Guardian's *median* run sitting at the ten-minute cap, alive at wave
+        // 62, while the next best in the roster reached 26. Two rules fix it
+        // without making the Ultimate weak — it has to actually drain a crowd,
+        // and a run only gets so many.
+        const drained = this.clearAll(1.2);
+        if (drained >= SIPHON.minDrain && this.siphonHealsLeft > 0 && this.integrity < this.maxIntegrity) {
+          this.siphonHealsLeft--;
+          this.integrity += 1;
+          this.events.emit('siphonHeal', { left: this.siphonHealsLeft });
+        }
         break;
       }
       case 'fracture': {
-        this.ult.timer = 0;
-        this.ult.duration = 0;
+        this.ult.timer = INSTANT_ULT_LOCKOUT;
+        this.ult.duration = INSTANT_ULT_LOCKOUT;
         this.clearAll(1.5);
         break;
       }
@@ -1183,7 +1259,8 @@ export class GameSession {
   }
 
   /** Destroy everything on screen, paying `scoreScale` per kill. */
-  private clearAll(scoreScale: number): void {
+  private clearAll(scoreScale: number): number {
+    let drained = 0;
     for (const t of this.pool.live) {
       if (!t.active || t.state === 'dying') continue;
       if (t.boss) {
@@ -1198,10 +1275,12 @@ export class GameSession {
       const gained = SCORING.ultimateKill * t.scoreMult * this.multiplier * this.stats.scoreMult * scoreScale;
       this.score += gained;
       this.combo += 1;
+      drained++;
       this.killThreat(t, true);
     }
     if (this.combo > this.maxCombo) this.maxCombo = this.combo;
     this.updateMultiplier();
+    return drained;
   }
 
   // -------------------------------------------------------------------- misc

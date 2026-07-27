@@ -14,6 +14,7 @@
 
 import type { Rarity } from '../render/palette';
 import type { SigilShape } from '../render/procgen';
+import { SHIELD } from './balance';
 
 export type UltimateId =
   | 'nova'
@@ -36,7 +37,14 @@ export interface GuardianStats {
   pulseCooldown: number;
   /** Seconds the pulse ring stays lethal. */
   pulseWindow: number;
-  /** Perfect-parry window on a normal shield contact, in seconds. */
+  /**
+   * How forgiving a PERFECT is on a normal shield contact.
+   *
+   * Expressed as a nominal window in seconds because that is how it reads on a
+   * card, but the mechanic it drives is angular: it scales the share of the
+   * shield arc that counts as dead centre. Use `perfectTolerance()` — reading
+   * this number directly is how it ended up decorative for a while.
+   */
   parryWindow: number;
   /** Multiplier on the speed of deflected threats. */
   deflectSpeed: number;
@@ -79,6 +87,20 @@ export const BASE_STATS: GuardianStats = {
   ultCost: 40,
   scoreMult: 1,
 };
+
+/**
+ * The fraction of the shield's half-arc that counts as a PERFECT.
+ *
+ * The single place `parryWindow` turns into behaviour. It is a ratio against
+ * the baseline Guardian, so a card or a Guardian that doubles the window really
+ * does double the centre of the shield — and the clamp keeps a sliver of
+ * non-perfect arc at the edges, because a shield that is perfect everywhere is
+ * a shield with no skill in it.
+ */
+export function perfectTolerance(s: GuardianStats): number {
+  const ratio = s.parryWindow / BASE_STATS.parryWindow;
+  return Math.min(0.95, Math.max(0.12, SHIELD.perfectTolerance * ratio));
+}
 
 function stats(overrides: Partial<GuardianStats>): GuardianStats {
   return { ...BASE_STATS, ...overrides };
@@ -165,7 +187,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Does not destroy incoming ordnance. Redirects it, with interest, toward whatever sent it.',
     ultimate: 'lance',
     ultimateText: 'LANCE — fire a piercing beam along your aim that shreds everything in its path.',
-    stats: stats({ arc: 0.92, deflectSpeed: 2.1, pulseCooldown: 2.5, scoreMult: 1.24 }),
+    stats: stats({ arc: 0.92, parryWindow: 0.16, deflectSpeed: 2.35, pulseCooldown: 2.5, integrity: 4, scoreMult: 1.3 }),
   },
   {
     id: 'vesper',
@@ -177,7 +199,7 @@ export const GUARDIANS: readonly Guardian[] = [
     tagline: 'Trades integrity for a faster Ultimate cycle.',
     lore: 'Burns brightest at the end of the shift. Has never described this as a problem.',
     ultimate: 'siphon',
-    ultimateText: 'SIPHON — drain every threat on screen into integrity and score.',
+    ultimateText: 'SIPHON — drain every threat on screen into score. Draining a crowd also restores integrity, up to three times a run.',
     stats: stats({ arc: 0.98, integrity: 2, ultCost: 28, scoreMult: 1.12 }),
   },
 
@@ -206,7 +228,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Small, dense, and entirely uninterested in where anything else intended to go.',
     ultimate: 'magnetize',
     ultimateText: 'MAGNETIZE — pull every threat into one point, then detonate it.',
-    stats: stats({ arc: 0.94, pulseCooldown: 2.3, pulseWindow: 0.34, ultCost: 38, scoreMult: 1.28 }),
+    stats: stats({ arc: 0.94, parryWindow: 0.16, pulseCooldown: 2.3, pulseWindow: 0.34, deflectSpeed: 1.75, integrity: 4, ultCost: 38, scoreMult: 1.28 }),
   },
   {
     id: 'zephyr',
@@ -232,7 +254,7 @@ export const GUARDIANS: readonly Guardian[] = [
     lore: 'Does not aim for the target. Aims for the sequence the target starts.',
     ultimate: 'nova',
     ultimateText: 'NOVA — detonate the nexus outward, destroying every threat on screen.',
-    stats: stats({ arc: 0.86, deflectSpeed: 1.95, parryWindow: 0.16, integrity: 3, scoreMult: 1.4 }),
+    stats: stats({ arc: 0.9, deflectSpeed: 2.05, parryWindow: 0.18, pulseCooldown: 2.3, integrity: 4, scoreMult: 1.4 }),
   },
 
   // ------------------------------------------------------------- LEGENDARY --
@@ -314,7 +336,7 @@ export const GUARDIANS: readonly Guardian[] = [
     ultimate: 'magnetize',
     ultimateText: 'MAGNETIZE — pull every threat into one point, then detonate it for double score.',
     stats: stats({
-      arc: 0.68,
+      arc: 0.78,
       turn: 0.02,
       parryWindow: 0.24,
       pulseCooldown: 1.7,

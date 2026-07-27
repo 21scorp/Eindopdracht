@@ -235,18 +235,41 @@ Current shape:
 
 | Skill | Median wave | Median run | Met a Warden |
 | --- | --- | --- | --- |
-| novice | 8 | 60s | 100% |
-| average | 15 | 104s | 100% |
-| expert | 22 | 164s | 100% |
+| novice | 10 | 68s | 95% |
+| average | 15 | 110s | 100% |
+| expert | 23 | 172s | 100% |
 
-An average run earns ~630 Cores, which is a summon every three runs and a
-ten-pull every thirty. The core and XP rates were halved when the draft landed:
-it roughly doubled the score an average run puts up — that is the point of it —
-and leaving them alone would have quietly halved the price of everything.
+An average run earns ~665 Cores, which is a summon every three runs and a
+ten-pull every twenty-eight. The core and XP rates were halved when the draft
+landed: it roughly doubled the score an average run puts up — that is the point
+of it — and leaving them alone would have quietly halved the price of
+everything.
 
-The harness has already earned its place. Its first report showed a median run
-length equal to the harness cap — runs were not ending at all — which turned out
-to be two independent soft-locks and one Ultimate that recharged itself.
+`--roster` reports every Guardian's median run side by side, and the median by
+rarity underneath it:
+
+| Rarity | Median score |
+| --- | --- |
+| common | 559k |
+| rare | 704k |
+| epic | 896k |
+| legendary | 2.34M |
+| mythic | 2.39M |
+
+The curve has to be monotonic. A raw best-to-worst ratio is the wrong alarm on
+its own — rarity is *supposed* to matter, so a healthy roster spreads wide — but
+a tier that earns less than the tier below it is a pull the player is
+disappointed by, and that is the one outcome a gacha cannot afford. The harness
+warns on the inversion, not on the spread.
+
+The harness has already earned its place, three times. Its first report showed a
+median run length equal to the harness cap — runs were not ending at all — which
+turned out to be two independent soft-locks and one Ultimate that recharged
+itself. Its roster comparison later showed one Guardian's *median* run sitting at
+the ten-minute cap, still alive at wave 62 while the next best in the roster
+reached 26: SIPHON healed faster than the game could damage, so the run had no
+ending. And with that fixed it showed an epic earning less than three commons,
+which is a pull nobody wants to get.
 
 ---
 

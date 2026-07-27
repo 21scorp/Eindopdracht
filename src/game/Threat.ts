@@ -77,6 +77,16 @@ export interface Threat {
   /** Siege archetypes: seconds until the next shot, and shots already fired. */
   siegeTimer: number;
   siegeShots: number;
+
+  /**
+   * How far down a chain reaction this threat is.
+   *
+   * A deflected shot that kills an incoming threat turns *that* threat into a
+   * deflected shot, which can do the same again. Unbounded, one clean parry
+   * walks through an entire wave one threat at a time — which is what let a
+   * good player survive indefinitely. This is the counter that stops it.
+   */
+  chainDepth: number;
 }
 
 let nextId = 1;
@@ -114,6 +124,7 @@ function makeThreat(def: ThreatDef): Threat {
     trailTimer: 0,
     siegeTimer: 0,
     siegeShots: 0,
+    chainDepth: 0,
   };
 }
 
@@ -165,6 +176,7 @@ export class ThreatPool {
       t.generation = 0;
       t.siegeTimer = 0;
       t.siegeShots = 0;
+      t.chainDepth = 0;
       t.boss = def.boss ?? false;
       t.trailTimer = 0;
       return t;

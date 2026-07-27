@@ -280,10 +280,30 @@ if (roster) {
   const scores = rows.map((r) => r.score).filter((s) => s > 0);
   const spread = Math.max(...scores) / Math.max(1, Math.min(...scores));
   console.log(`\n  best/worst score ratio: ${spread.toFixed(2)}x`);
-  // Rarity is *supposed* to matter, so some spread is the design working. The
-  // threshold is set to catch a genuinely broken pick — the first run of this
-  // report showed 49x, which was a Guardian whose Ultimate recharged itself.
-  if (spread > 6) {
+
+  // A raw ratio is the wrong alarm on its own: rarity is *supposed* to matter,
+  // so a healthy roster has a wide spread by design. What is never healthy is a
+  // rarity tier that earns less than the tier below it — that is a pull the
+  // player is disappointed by, which is the one outcome a gacha cannot afford.
+  const ORDER = ['common', 'rare', 'epic', 'legendary', 'mythic'];
+  const byRarity = ORDER.map((r) => ({
+    rarity: r,
+    score: mean(rows.filter((x) => x.rarity === r).map((x) => x.score)),
+  })).filter((x) => x.score > 0);
+
+  console.log('\n  \x1b[1mmedian score by rarity\x1b[0m');
+  for (const r of byRarity) console.log(`  ${pad(r.rarity, 12)}${pad(Math.round(r.score).toLocaleString('en-US'), 12, true)}`);
+
+  const inversions = byRarity.filter((r, i) => i > 0 && r.score < byRarity[i - 1]!.score);
+  for (const r of inversions) {
+    console.log(`  \x1b[33mwarning: ${r.rarity} earns less than the tier below it\x1b[0m`);
+  }
+
+  // The ratio alarm stays, set to catch a genuinely broken pick rather than a
+  // working rarity curve — the first run of this report showed 49x, which was a
+  // Guardian whose Ultimate recharged itself, and a later one showed 39x, which
+  // was an Ultimate that healed faster than the game could damage.
+  if (spread > 12) {
     console.log('  \x1b[33mwarning: spread this wide usually means one kit has an exploit, not that rarity works\x1b[0m');
   }
 }

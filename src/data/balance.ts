@@ -117,9 +117,22 @@ export const DIFFICULTY = {
   budgetBase: 2.4,
   budgetGrowth: 2.0,
   budgetExponent: 1.3,
-  /** Global speed multiplier for wave n: 1 + (n-1) * speedGrowth, capped. */
+  /**
+   * Global speed multiplier for wave n.
+   *
+   * Two slopes. The first is the difficulty curve people actually play: 7.5%
+   * per wave up to a soft knee. Past the knee it keeps climbing, more slowly
+   * and without a ceiling, because a hard cap means difficulty *saturates* —
+   * and a game whose difficulty saturates has no ending. The balance harness
+   * found exactly that: one Guardian's median run sat at the 600-second cap,
+   * still alive at wave 62, because nothing past wave 28 was any harder than
+   * wave 28.
+   */
   speedGrowth: 0.075,
-  speedCap: 3.0,
+  /** Wave at which the curve bends rather than stops. */
+  speedKnee: 28,
+  /** Per-wave growth past the knee. Small, but it never stops. */
+  speedGrowthLate: 0.055,
   /** Spawn cadence shortens with wave number, floored so it stays readable. */
   spawnIntervalBase: 0.9,
   spawnIntervalDecay: 0.93,

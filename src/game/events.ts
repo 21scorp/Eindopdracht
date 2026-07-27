@@ -68,6 +68,7 @@ export type GameEvents = {
   runEnd: { stats: RunStats };
   lastStand: Record<string, never>;
   secondWind: Record<string, never>;
+  siphonHeal: { left: number };
   heraldShot: { x: number; y: number; angle: number };
   resonanceTaken: { id: string; name: string; tier: string };
 };

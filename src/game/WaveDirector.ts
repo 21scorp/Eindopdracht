@@ -22,6 +22,19 @@ import {
   type ThreatDef,
 } from '../data/threats';
 
+/**
+ * How fast threats travel on a given wave.
+ *
+ * Exported so the balance harness and the tests can reason about the curve
+ * without instantiating a director.
+ */
+export function waveSpeedMultiplier(wave: number): number {
+  const n = Math.max(0, wave - 1);
+  const knee = DIFFICULTY.speedKnee;
+  if (n <= knee) return 1 + n * DIFFICULTY.speedGrowth;
+  return 1 + knee * DIFFICULTY.speedGrowth + (n - knee) * DIFFICULTY.speedGrowthLate;
+}
+
 export type WavePhase = 'calm' | 'spawning' | 'clearing' | 'boss' | 'complete';
 
 export interface SpawnRequest {
@@ -86,7 +99,7 @@ export class WaveDirector {
 
   /** Global speed multiplier applied to threats spawned right now. */
   get speedMultiplier(): number {
-    return Math.min(DIFFICULTY.speedCap, 1 + Math.max(0, this.wave - 1) * DIFFICULTY.speedGrowth);
+    return waveSpeedMultiplier(this.wave);
   }
 
   /** 0..1 progress through the current wave's spawn budget, for the HUD. */

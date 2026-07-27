@@ -7,7 +7,7 @@
  */
 
 import { RARITY_STYLE, RARITIES, type Rarity } from '../../render/palette';
-import { GUARDIANS, MAX_LEVEL, MAX_STARS, getGuardian, scaleStats } from '../../data/guardians';
+import { GUARDIANS, MAX_LEVEL, MAX_STARS, getGuardian, perfectTolerance, scaleStats } from '../../data/guardians';
 import type { App } from '../../app/App';
 import { Screen } from '../Screen';
 import { Wallet, guardianCard, meter, rarityChip, stars, statRow, textureImg, topBar } from '../components';
@@ -210,7 +210,7 @@ export class RosterScreen extends Screen {
         'div',
         { class: 'detail__stats' },
         statRow('Shield arc', `${Math.round((stat.arc * 180) / Math.PI)}°`),
-        statRow('Parry window', `${Math.round(stat.parryWindow * 1000)} ms`),
+        statRow('Perfect zone', `${Math.round(perfectTolerance(stat) * 100)}% of arc`),
         statRow('Pulse cycle', `${stat.pulseCooldown.toFixed(1)} s`),
         statRow('Deflect force', `${stat.deflectSpeed.toFixed(2)}x`),
         statRow('Integrity', String(stat.integrity)),
