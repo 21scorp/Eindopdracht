@@ -258,12 +258,12 @@ Current shape:
 
 | Skill | Median wave | Median run | Met a Warden |
 | --- | --- | --- | --- |
-| novice | 10 | 70s | 96% |
-| average | 16 | 121s | 100% |
-| expert | 23 | 172s | 100% |
+| novice | 9 | 63s | 96% |
+| average | 16 | 120s | 100% |
+| expert | 24 | 180s | 100% |
 
-An average run earns ~665 Cores, which is a summon every three runs and a
-ten-pull every twenty-eight. The core and XP rates were halved when the draft
+An average run earns ~655 Cores, which is a summon every three runs and a
+ten-pull every twenty-nine. The core and XP rates were halved when the draft
 landed: it roughly doubled the score an average run puts up — that is the point
 of it — and leaving them alone would have quietly halved the price of
 everything.

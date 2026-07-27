@@ -171,7 +171,7 @@ export const REWARDS = {
    * an average run puts up — that is the point of it — and leaving this alone
    * would have quietly halved the price of every summon.
    */
-  coresPerScore: 0.0008,
+  coresPerScore: 0.0007,
   /** Flat cores for finishing a wave. */
   coresPerWave: 12,
   /** Bonus cores for a new personal best. */
