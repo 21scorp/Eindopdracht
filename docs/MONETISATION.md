@@ -117,11 +117,22 @@ progress at a published rate.
 and one permanent quality-of-life entitlement. There is no paid power that
 cannot be earned, and no paid summon rate.
 
-**The shop is never the screen that opens on launch.** The daily reward is.
+**The shop is never the screen that opens on launch.** Neither is the daily
+reward, on the visit that matters most: a brand-new account opens on the game.
+Handing someone a login bonus before they have played a single wave is the most
+free-to-play thing a game can do, and it answers a question nobody has asked
+yet. The reward is still there, badged, the moment they come back from their
+first run.
 
 **Runs are capped, gently.** Core income has a daily soft cap, past which
 earning continues at a reduced rate rather than stopping. A hard wall punishes
 the players who play the most.
+
+**The daily seed is not a limited resource.** The Daily Run can be replayed as
+often as somebody likes, and the reward for it is paid on the first attempt of
+the day rather than on a good one. Gating either would turn "everyone plays the
+same waves today" — which exists to be talked about — into a thing to be
+rationed.
 
 ---
 
