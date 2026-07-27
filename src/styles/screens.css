@@ -1132,6 +1132,80 @@
   gap: 6px;
 }
 
+/* --- highlight clip ---------------------------------------------------- */
+
+/*
+ * Sits directly under the guardian row, above the stat grid: the clip is the
+ * thing worth acting on, and the numbers are still there underneath it. It
+ * animates in because it arrives a beat late, and an element that simply
+ * appears mid-read looks like a glitch.
+ */
+.results__clip {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  padding: 10px;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), rgba(17, 23, 41, 0.72));
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  flex: none;
+  animation: clip-in 320ms var(--ease-out) both;
+}
+
+.results__clip[hidden] {
+  display: none;
+}
+
+@keyframes clip-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.results__clipvideo {
+  width: 88px;
+  flex: none;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  border-radius: calc(var(--r-md) - 4px);
+  background: #05070f;
+  border: 1px solid var(--line-soft);
+}
+
+.results__clipbody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.results__cliptext {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.results__clipbtn {
+  align-self: flex-start;
+  padding-inline: 18px;
+}
+
+/* Landscape: the preview is wide, so let it lie down instead of towering. */
+@media (orientation: landscape) and (max-height: 560px) {
+  .results__clipvideo {
+    width: 108px;
+    aspect-ratio: 16 / 9;
+  }
+}
+
 .results__rewards {
   display: flex;
   flex-direction: column;

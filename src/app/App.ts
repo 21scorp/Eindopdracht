@@ -30,6 +30,7 @@ import { Coach } from '../game/Coach';
 import type { RunStats } from '../game/events';
 import { Profile } from '../meta/Profile';
 import { QuestTracker, type QuestView } from '../meta/quests';
+import { ClipRecorder, shouldArm, type ClipResult } from '../meta/ClipRecorder';
 import { clearChallengeFromUrl, evaluateChallenge, readChallengeFromUrl, type Challenge } from '../meta/challenge';
 import { ScreenStack } from '../ui/Screen';
 import { audio } from '../audio/AudioEngine';
@@ -69,6 +70,7 @@ export class App {
   readonly coach: Coach;
   readonly debug: DebugOverlay;
   readonly quests: QuestTracker;
+  readonly clips: ClipRecorder;
 
   mode: AppMode = 'menu';
 
@@ -86,8 +88,13 @@ export class App {
   private lastRunStats: RunStats | null = null;
   private lastRunRewards: RunRewards | null = null;
 
+  /** Resolves with the finished highlight clip, or null when there is none. */
+  lastClip: Promise<ClipResult | null> = Promise.resolve(null);
+
   private adaptiveTimer = 0;
   private lowFrameStreak = 0;
+  private clipStress = 0;
+  private clipBaselineFps = 60;
   /** True while a press that started on a canvas HUD button is still held. */
   private hudCaptured = false;
 
@@ -119,6 +126,7 @@ export class App {
 
     this.audio = new GameAudio(audio);
     this.audio.bind(this.session);
+    this.clips = new ClipRecorder(canvas, audio);
     audio.install();
     this.syncSettings();
 
@@ -247,6 +255,46 @@ export class App {
     this.audio.update();
 
     this.camera.setVignette(this.session.integrity <= 1 ? 1 : 0);
+    this.considerClip(dt);
+  }
+
+  /**
+   * Start recording once the run turns into something worth watching, and stop
+   * paying for it if the device cannot afford it.
+   *
+   * The affordability test is relative, not absolute. A phone that was already
+   * running at 40fps is not being hurt by the encoder, and killing its clip on
+   * an absolute threshold would mean nobody on a mid-range device ever gets one.
+   * What matters is the drop from the rate the run was holding a moment before
+   * the recorder armed.
+   */
+  private considerClip(dt: number): void {
+    if (!this.profile.settings.clips || !this.clips.supported) return;
+
+    if (this.clips.recording) {
+      const floor = Math.max(20, this.clipBaselineFps * 0.72);
+      this.clipStress = this.loop.fps < floor ? this.clipStress + dt : 0;
+      // Two solid seconds below the floor is the encoder, not a hitch.
+      if (this.clipStress > 2) {
+        console.info(
+          `[App] highlight capture abandoned — ${this.loop.fps.toFixed(0)}fps against a ${floor.toFixed(0)}fps floor`,
+        );
+        this.clips.abandon();
+      }
+      return;
+    }
+
+    const arm = shouldArm({
+      integrity: this.session.integrity,
+      combo: this.session.combo,
+      bossPresent: this.session.pool.findBoss() !== null,
+      phase: this.session.phase,
+    });
+    if (arm) {
+      this.clipStress = 0;
+      this.clipBaselineFps = this.loop.fps;
+      this.clips.start();
+    }
   }
 
   private updateMenu(dt: number): void {
@@ -293,6 +341,10 @@ export class App {
     });
 
     r.endFrame();
+
+    // After `endFrame`, so the clip carries the finished, composited image —
+    // bloom, grain, HUD and all — rather than a bare scene buffer.
+    if (this.mode === 'playing') this.clips.frame();
 
     this.adaptiveQuality(dt);
   }
@@ -356,6 +408,9 @@ export class App {
     this.hud.challengeTarget = this.activeChallenge?.score ?? 0;
 
     this.screens.closeAll();
+    this.clips.discard();
+    this.lastClip = Promise.resolve(null);
+    this.clipStress = 0;
     this.mode = 'playing';
     this.input.suppressed = false;
     this.hud.reset();
@@ -392,6 +447,9 @@ export class App {
   }
 
   private handleRunEnd(stats: RunStats): void {
+    // Kick this off before anything else: the encoder needs a moment to flush,
+    // and the results screen picks the promise up and shows the button late.
+    this.lastClip = this.clips.recording ? this.clips.finish() : Promise.resolve(null);
     this.lastRunStats = stats;
     this.lastRunRewards = this.payoutRun(stats);
     // Quests read the finished run's own stats rather than subscribing to

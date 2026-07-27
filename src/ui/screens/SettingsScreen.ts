@@ -77,6 +77,12 @@ export class SettingsScreen extends Screen {
         this.app.profile.updateSettings({ showFps: v });
         this.app.syncSettings();
       }, 'Frame rate and a rolling frame-time graph, bottom right.'),
+      this.toggle('Highlight clips', s.clips, (v) => {
+        this.app.profile.updateSettings({ clips: v });
+        if (!v) this.app.clips.discard();
+      }, this.app.clips.supported
+        ? 'Records the end of a run so you can share it as a video. Turns itself off if it costs frames.'
+        : 'Not available in this browser — video capture is unsupported here.'),
 
       sectionTitle('Account'),
       h(

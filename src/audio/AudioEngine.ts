@@ -155,6 +155,26 @@ export class AudioEngine {
     return this.ctx ? this.musicBus : null;
   }
 
+  /**
+   * A stream of everything the player is hearing, for the clip recorder.
+   *
+   * Tapped off the master so a recorded clip has the same mix as the speakers —
+   * a highlight with the music muted is a highlight nobody watches twice. The
+   * node is created once and kept: adding a second destination per recording
+   * would leak a node per run.
+   */
+  captureStream(): MediaStream | null {
+    if (!this.ctx) return null;
+    if (typeof this.ctx.createMediaStreamDestination !== 'function') return null;
+    if (!this.recordDestination) {
+      this.recordDestination = this.ctx.createMediaStreamDestination();
+      this.master.connect(this.recordDestination);
+    }
+    return this.recordDestination.stream;
+  }
+
+  private recordDestination: MediaStreamAudioDestinationNode | null = null;
+
   get reverbNode(): ConvolverNode | null {
     return this.ctx ? this.reverb : null;
   }

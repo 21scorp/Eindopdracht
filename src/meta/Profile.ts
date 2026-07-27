@@ -81,6 +81,8 @@ export interface Settings {
   /** Mirrors the HUD action buttons for left-handed play. */
   leftHanded: boolean;
   showFps: boolean;
+  /** Record the last stretch of a run so it can be shared as a video. */
+  clips: boolean;
 }
 
 export interface ProfileData {
@@ -207,6 +209,7 @@ function makeDefaults(): ProfileData {
       reducedFlash: false,
       leftHanded: false,
       showFps: false,
+      clips: true,
     },
     purchases: {},
     entitlements: {},

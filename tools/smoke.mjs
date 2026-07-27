@@ -150,11 +150,66 @@ try {
     throw new Error('nothing happened in 8s of play — threats never reached the shield');
   }
 
+  // --- highlight capture ----------------------------------------------------
+  // Drop to the last life so the recorder arms, then let it run long enough to
+  // clear the minimum clip length. This is the only place the encoder is
+  // exercised end to end; the unit tests only cover the decisions around it.
+  const clipSupported = await page.evaluate(() => window.aegis.clips.supported);
+  console.log('  clip capture supported:', clipSupported);
+  if (clipSupported) {
+    log('recording a highlight');
+    // The autopilot dies when it dies, so do not assume a run is still going.
+    await page.evaluate(() => {
+      if (window.aegis.mode !== 'playing') window.aegis.startRun();
+    });
+    await page.waitForTimeout(700);
+    // Drop to the last life so the recorder arms for the reason a real run
+    // would, and hold the nexus invulnerable so the clip is long enough to
+    // survive the minimum length. Without the second half, the autopilot dies
+    // two seconds in and the encoder has nothing to hand back.
+    for (let i = 0; i < 13; i++) {
+      await page.evaluate(() => {
+        window.aegis.session.integrity = 1;
+        window.aegis.session.invuln = 5;
+      });
+      await page.waitForTimeout(450);
+    }
+    const rec = await page.evaluate(() => ({
+      recording: window.aegis.clips.recording,
+      seconds: Math.round(window.aegis.clips.seconds * 10) / 10,
+      fps: Math.round(window.aegis.loop.fps),
+    }));
+    console.log('  recorder:', JSON.stringify(rec));
+    if (!rec.recording) throw new Error('the recorder never armed at one integrity');
+    if (rec.seconds < 4) throw new Error(`recorder only ran ${rec.seconds}s`);
+  }
+
   // --- force a run end so results render ------------------------------------
   log('ending the run');
-  await page.evaluate(() => window.aegis.session.end());
+  await page.evaluate(() => {
+    window.aegis.session.invuln = 0;
+    window.aegis.session.end();
+  });
   await page.waitForTimeout(1200);
   await shot('04-results');
+
+  if (clipSupported) {
+    const clip = await page.evaluate(async () => {
+      const c = await window.aegis.lastClip;
+      return c
+        ? { bytes: c.blob.size, type: c.blob.type, seconds: Math.round(c.seconds * 10) / 10, w: c.width, h: c.height }
+        : null;
+    });
+    console.log('  highlight clip:', JSON.stringify(clip));
+    if (!clip) throw new Error('the run ended while recording but produced no clip');
+    if (clip.bytes < 20_000) throw new Error(`clip is only ${clip.bytes} bytes — the encoder wrote nothing`);
+    if (clip.w % 2 !== 0 || clip.h % 2 !== 0) throw new Error(`odd clip dimensions ${clip.w}x${clip.h}`);
+    const offered = await page.evaluate(
+      () => !!document.querySelector('.results__clip:not([hidden]) video.results__clipvideo'),
+    );
+    if (!offered) throw new Error('the results screen never offered the clip');
+    await shot('04b-results-clip');
+  }
 
   // --- summon ---------------------------------------------------------------
   log('opening summon');

@@ -25,7 +25,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 154 unit tests (gacha, combat, economy, quests, textures, engine) |
+| `npm test` | 173 unit tests (gacha, combat, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
@@ -230,21 +230,49 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **154 unit tests** across gacha guarantees, combat mechanics, the wallet and
-  save migration, daily objectives, the texture contract, and the engine
-  primitives. The gacha suite asserts every published guarantee, including the
-  50/50 and its make-good; the quest suite asserts a reward can never pay twice.
+- **173 unit tests** across gacha guarantees, combat mechanics, the wallet and
+  save migration, daily objectives, clip capture decisions, the texture
+  contract, and the engine primitives. The gacha suite asserts every published
+  guarantee, including the 50/50 and its make-good; the quest suite asserts a
+  reward can never pay twice.
 - **`npm run balance`** for systemic behaviour over hundreds of runs.
 - **`npm run smoke`** drives a real Chromium at phone size: claims the daily
-  reward, plays a run with an autopilot, performs a ten-pull, opens every
-  screen, renders the share card, follows a challenge link and checks the run
-  uses the challenger's seed. Fails on any console error.
+  reward, plays a run with an autopilot, records a highlight clip and checks the
+  encoder actually produced a file, performs a ten-pull, opens every screen,
+  renders the share card, follows a challenge link and checks the run uses the
+  challenger's seed. Fails on any console error.
 - **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
   monitor and fails on content wider than the viewport.
 
 ---
 
 ## Sharing
+
+### The highlight clip
+
+A screenshot proves a score. Nobody watches a screenshot. When a run turns into
+something worth seeing — the last life, a Warden on screen, a combo past 25 —
+the game starts recording, and the results screen offers the last stretch back
+as a real video file with the game's own audio on it, one tap from the share
+sheet.
+
+Three things make it work rather than just exist:
+
+- **MP4 first.** Instagram and TikTok will not ingest WebM. The recorder asks
+  for MP4 wherever the browser can encode it and says plainly when it cannot.
+- **It refuses to cost frames.** Frames are copied into a capture canvas capped
+  at 1280px and pushed at 30fps rather than encoding the display surface at
+  device pixel ratio. If the frame rate still drops to 72% of what the run was
+  holding before the recorder armed, the clip is abandoned mid-encode. A smooth
+  game matters more than a clip of one.
+- **It carries a mark.** The wordmark is drawn into the frames, small and in the
+  corner. A clip that travels without naming the game does nothing for it.
+
+The recorder keeps at most two rolling segments, so a twenty-minute run costs
+the same memory as a two-minute one, and the segment containing the ending is
+the one that gets offered.
+
+### Challenge links
 
 A run is reproducible: the wave director is seeded, so the same seed produces
 the same waves in the same order. Sharing emits both a card and a **challenge
@@ -265,8 +293,8 @@ hashed assets are cache-first because the URL is immutable.
 ## Status
 
 Complete and playable end to end: gameplay, progression, collection, summoning,
-shop, daily loop, objectives, coaching, challenge links, share card, audio,
-settings, save transfer and offline install.
+shop, daily loop, objectives, coaching, challenge links, share card, highlight
+clips, audio, settings, save transfer and offline install.
 
 Not built yet, and deliberately: a backend, leaderboards, real payments, and the
 sprite art itself.

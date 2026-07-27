@@ -15,6 +15,7 @@ import { getGuardian } from '../../data/guardians';
 import type { App, ChallengeResult, RunRewards } from '../../app/App';
 import type { QuestView } from '../../meta/quests';
 import type { RunStats } from '../../game/events';
+import { clipFileName, type ClipResult } from '../../meta/ClipRecorder';
 import { Screen } from '../Screen';
 import { statRow, textureImg } from '../components';
 import { button, clear, fmt, fmtTime, h } from '../dom';
@@ -32,6 +33,10 @@ export class ResultsScreen extends Screen {
   private rewards: RunRewards | null = null;
   private challenge: ChallengeResult | null = null;
   private questsCompleted: QuestView[] = [];
+  private clipBox!: HTMLElement;
+  private clipUrl: string | null = null;
+  /** Bumped on every entry so a slow encode cannot land on a later run. */
+  private visit = 0;
 
   constructor(private readonly app: App) {
     super('results', 'screen screen--overlay results');
@@ -43,6 +48,7 @@ export class ResultsScreen extends Screen {
     this.portrait = h('div', { class: 'results__portrait' });
     this.grid = h('div', { class: 'results__grid' });
     this.rewardsEl = h('div', { class: 'results__rewards panel' });
+    this.clipBox = h('div', { class: 'results__clip', hidden: true });
 
     this.shareBtn = button('SHARE', () => void this.share(), { variant: 'ghost', class: 'results__share' });
 
@@ -54,7 +60,7 @@ export class ResultsScreen extends Screen {
         this.scoreEl,
         h('div', { class: 'results__scorelabel t-label', text: 'Final score' }),
       ),
-      h('div', { class: 'results__mid grow scroll' }, this.portrait, this.grid, this.rewardsEl),
+      h('div', { class: 'results__mid grow scroll' }, this.portrait, this.clipBox, this.grid, this.rewardsEl),
       h(
         'div',
         { class: 'results__actions' },
@@ -76,7 +82,107 @@ export class ResultsScreen extends Screen {
     this.questsCompleted = p.questsCompleted ?? [];
     this.targetScore = p.stats.score;
     this.shownScore = 0;
+    this.visit++;
     this.render();
+    void this.attachClip(this.visit);
+  }
+
+  protected override onExit(): void {
+    this.releaseClip();
+  }
+
+  // ------------------------------------------------------------------- clip
+
+  /**
+   * The highlight, if the encoder produced one.
+   *
+   * It arrives late — the recorder is still flushing when this screen opens —
+   * so the panel slides in rather than blocking the results behind a spinner.
+   * The preview loops silently: watching your own last ten seconds is what makes
+   * someone press share, and a card with a static thumbnail does not do that.
+   */
+  private async attachClip(visit: number): Promise<void> {
+    this.releaseClip();
+    let clip: ClipResult | null = null;
+    try {
+      clip = await this.app.lastClip;
+    } catch (err) {
+      console.warn('[Results] clip failed', err);
+    }
+    if (!clip || visit !== this.visit || !this.isActive) return;
+
+    const result = clip;
+    const stats = this.stats;
+    if (!stats) return;
+
+    this.clipUrl = URL.createObjectURL(result.blob);
+    const video = h('video', {
+      class: 'results__clipvideo',
+      src: this.clipUrl,
+      autoplay: true,
+      loop: true,
+      muted: true,
+      playsinline: true,
+      preload: 'auto',
+    }) as HTMLVideoElement;
+    video.muted = true; // the attribute alone does not stop iOS asking
+
+    clear(this.clipBox);
+    this.clipBox.append(
+      video,
+      h(
+        'div',
+        { class: 'results__clipbody' },
+        h('span', { class: 't-label', text: `Highlight · ${result.seconds.toFixed(0)}s` }),
+        h('p', {
+          class: 'results__cliptext',
+          text: result.format.social
+            ? 'The last stretch of your run, with sound. Post it.'
+            : 'The last stretch of your run. Your browser saves WebM — convert it to post on TikTok.',
+        }),
+        button('SHARE CLIP', () => void this.shareClip(result), { variant: 'primary', class: 'results__clipbtn' }),
+      ),
+    );
+    this.clipBox.removeAttribute('hidden');
+    void video.play().catch(() => {
+      // Autoplay refused. The controls are the fallback, not an error.
+      video.controls = true;
+    });
+  }
+
+  private async shareClip(clip: ClipResult): Promise<void> {
+    const stats = this.stats;
+    if (!stats) return;
+    const name = clipFileName(stats, clip.format.extension);
+    const text = `Wave ${stats.wave}, ${fmt(stats.score)} points. Beat that.`;
+
+    try {
+      const file = new File([clip.blob], name, { type: clip.blob.type });
+      const nav = navigator as Navigator & { canShare?: (d: unknown) => boolean };
+      if (nav.canShare?.({ files: [file] }) && typeof nav.share === 'function') {
+        await nav.share({ files: [file], text, title: 'Prismbreak' });
+        this.app.audio.uiConfirm();
+        return;
+      }
+    } catch (err) {
+      // A cancelled share sheet throws AbortError; that is not a failure.
+      if ((err as Error)?.name === 'AbortError') return;
+      console.warn('[Results] clip share failed, falling back to download', err);
+    }
+
+    const a = h('a', { href: this.clipUrl ?? '', download: name }) as HTMLAnchorElement;
+    a.click();
+    this.app.audio.uiConfirm();
+    this.notify('Clip saved to your downloads.');
+  }
+
+  private releaseClip(): void {
+    if (this.clipUrl) {
+      URL.revokeObjectURL(this.clipUrl);
+      this.clipUrl = null;
+    }
+    clear(this.clipBox);
+    this.clipBox.setAttribute('hidden', 'true');
   }
 
   private render(): void {
