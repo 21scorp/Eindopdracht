@@ -118,11 +118,31 @@ export class RatesScreen extends Screen {
     return table;
   }
 
+  /**
+   * The published expectation, computed by running the real pull function.
+   *
+   * Two and a half thousand simulated pulls is 160ms of blocked main thread —
+   * ten dropped frames on the way into the screen, which is a visible hitch on
+   * the one screen whose whole job is to look trustworthy. The answer depends
+   * only on the banner config, so it is computed once per banner per session
+   * and, the first time, *after* the screen has painted: the panel opens with
+   * placeholders and fills in a frame later.
+   */
   private expectation(banner: Banner): HTMLElement {
-    // Simulated with a throwaway RNG so it never touches the account's stream.
-    const rng = new Rng('rates-preview');
-    const avgCost = simulateAverageMythicCost(banner, rng, 2500);
-    const avgPulls = avgCost / banner.costSingle;
+    const cached = RatesScreen.expectations.get(banner.id);
+    const pullsEl = h('span', { class: 't-num t-accent', text: cached ? (cached / banner.costSingle).toFixed(1) : '—' });
+    const costEl = h('span', { class: 't-num', text: cached ? fmt(cached) : '—' });
+
+    if (cached === undefined) {
+      window.setTimeout(() => {
+        // Simulated with a throwaway RNG so it never touches the account's stream.
+        const avgCost = simulateAverageMythicCost(banner, new Rng('rates-preview'), 2500);
+        RatesScreen.expectations.set(banner.id, avgCost);
+        pullsEl.textContent = (avgCost / banner.costSingle).toFixed(1);
+        costEl.textContent = fmt(avgCost);
+      }, 0);
+    }
+
     return h(
       'div',
       { class: 'panel rates__expectation' },
@@ -130,13 +150,13 @@ export class RatesScreen extends Screen {
         'div',
         { class: 'row row--between' },
         h('span', { class: 't-label', text: 'Average summons per Mythic' }),
-        h('span', { class: 't-num t-accent', text: avgPulls.toFixed(1) }),
+        pullsEl,
       ),
       h(
         'div',
         { class: 'row row--between' },
         h('span', { class: 't-label', text: 'Average prisms per Mythic' }),
-        h('span', { class: 't-num', text: fmt(avgCost) }),
+        costEl,
       ),
       h('p', {
         class: 't-body',
@@ -144,6 +164,9 @@ export class RatesScreen extends Screen {
       }),
     );
   }
+
+  /** Per-banner, per-session. The simulation is deterministic, so once is enough. */
+  private static readonly expectations = new Map<string, number>();
 
   private pool(banner: Banner): HTMLElement {
     const excluded = new Set(banner.excluded ?? []);

@@ -19,7 +19,20 @@ const CURRENCY_META: Record<CurrencyId, { texture: string; label: string; title:
 };
 
 /** Render a procedural texture into an <img> so DOM and canvas share the art. */
-export function textureImg(key: string, size: number, className = ''): HTMLImageElement {
+/**
+ * Data URLs, cached by texture key.
+ *
+ * `toDataURL` is a PNG encode on the main thread. The roster builds sixteen
+ * cards at once and took 95ms to open because of it — a visible hitch every
+ * time. The bytes for a given key never change (a texture is generated once and
+ * an atlas frame is immutable), so encode once and hand out the same string.
+ */
+const dataUrls = new Map<string, string>();
+
+function textureDataUrl(key: string): string {
+  const hit = dataUrls.get(key);
+  if (hit) return hit;
+
   const tex = textures.get(key);
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(tex.sw));
@@ -27,8 +40,14 @@ export function textureImg(key: string, size: number, className = ''): HTMLImage
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(tex.image, tex.sx, tex.sy, tex.sw, tex.sh, 0, 0, canvas.width, canvas.height);
 
+  const url = canvas.toDataURL();
+  dataUrls.set(key, url);
+  return url;
+}
+
+export function textureImg(key: string, size: number, className = ''): HTMLImageElement {
   const img = h('img', { class: className, alt: '', width: size, height: size });
-  img.src = canvas.toDataURL();
+  img.src = textureDataUrl(key);
   img.style.width = `${size}px`;
   img.style.height = 'auto';
   return img;
