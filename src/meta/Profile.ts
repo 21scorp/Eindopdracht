@@ -380,15 +380,15 @@ export class Profile {
     }
 
     existing.copies++;
+    // Copies beyond the first buy stars on a published schedule. This loops
+    // rather than stepping once, so a save imported with more copies than stars
+    // — or a batch grant — settles at the level it has actually paid for.
     let starUp = false;
-    const needed = starUpCost(existing.stars);
-    // Copies beyond the first are spent on stars, then converted to shards.
     const spent = existing.copies - 1;
-    if (existing.stars < MAX_STARS && spent >= cumulativeStarCost(existing.stars)) {
+    while (existing.stars < MAX_STARS && spent >= cumulativeStarCost(existing.stars)) {
       existing.stars++;
       starUp = true;
     }
-    void needed;
 
     const shards = DUPLICATE_SHARDS[guardian.rarity] ?? 0;
     if (shards > 0) this.credit('shards', shards, `duplicate:${id}:${source}`);

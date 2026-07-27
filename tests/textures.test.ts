@@ -118,6 +118,36 @@ describe('texture store', () => {
     expect(store.keys()).toContain('from/atlas');
   });
 
+  it('collapses a near-identical tint ramp onto a few cache entries', () => {
+    const store = populatedStore();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+
+    // An animated accent produces a different hex every frame. Without
+    // quantisation this allocates one canvas per frame and evicts something
+    // useful to hold it.
+    for (let i = 0; i < 256; i++) {
+      const hex = `#${i.toString(16).padStart(2, '0')}e1ff`;
+      store.draw(ctx, 'nexus/ring', 0, 0, { tint: hex });
+    }
+    expect(store.stats.tints).toBeLessThanOrEqual(40);
+  });
+
+  it('keeps the tint cache inside its pixel budget', () => {
+    const store = populatedStore();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d')!;
+
+    // 512x512 sheets in many colours: entry count alone would not catch this.
+    for (let r = 0; r < 256; r += 8) {
+      for (let g = 0; g < 256; g += 32) {
+        store.draw(ctx, 'nexus/ring', 0, 0, { tint: `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}ff` });
+      }
+    }
+    // Budget is four megapixels; allow one entry of slack for the newest.
+    expect(store.stats.tintMegapixels).toBeLessThan(4.5);
+  });
+
   it('reports animation frames and ends a non-looping animation', () => {
     const store = populatedStore();
     store.defineAnimation({ name: 'test', frames: ['a', 'b', 'c'], fps: 10, loop: false });

@@ -47,6 +47,10 @@ export class Hud {
     private readonly textures: TextureStore,
   ) {
     this.safeTop = readSafeAreaTop();
+    // The inset changes when the device rotates, so it cannot be read once.
+    renderer.onResize(() => {
+      this.safeTop = readSafeAreaTop();
+    });
   }
 
   reset(): void {

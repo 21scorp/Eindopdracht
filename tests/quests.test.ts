@@ -40,6 +40,34 @@ function run(overrides: Partial<RunStats> = {}): RunStats {
   };
 }
 
+/**
+ * Pin an exact quest set. The daily roll depends on the account id *and* the
+ * date, so a test that relies on it is a test that behaves differently
+ * tomorrow — and one that quietly picks the "play 3 runs" quest fails when the
+ * fixture only plays one.
+ */
+function withQuests(ids: string[]): { profile: Profile; tracker: QuestTracker } {
+  const profile = freshProfile();
+  profile.data.questDate = profile.data.daily.date;
+  profile.data.quests = ids.map((id) => ({ id, progress: 0, claimed: false }));
+  return { profile, tracker: new QuestTracker(profile) };
+}
+
+/** A run large enough to finish any single-run objective in the pool. */
+const HUGE = run({
+  score: 500_000,
+  wave: 30,
+  maxCombo: 200,
+  perfects: 200,
+  parries: 200,
+  chains: 200,
+  kills: 500,
+  bossKills: 5,
+  ultimatesUsed: 20,
+});
+
+const SINGLE_RUN_QUESTS = ['perfects40', 'parries25', 'combo35'];
+
 beforeEach(() => window.localStorage.clear());
 
 describe('the pool', () => {
@@ -127,28 +155,30 @@ describe('the tracker', () => {
   });
 
   it('advances on a run and reports what just completed', () => {
-    const profile = freshProfile();
-    const tracker = new QuestTracker(profile);
-    // A run big enough to finish anything in the pool.
-    const huge = run({ score: 500_000, wave: 30, maxCombo: 200, perfects: 200, parries: 200, chains: 200, kills: 500, bossKills: 5, ultimatesUsed: 20 });
-    const completed = tracker.recordRun(huge);
-    expect(completed.length).toBeGreaterThan(0);
+    const { tracker } = withQuests(SINGLE_RUN_QUESTS);
+    const completed = tracker.recordRun(HUGE);
+    expect(completed).toHaveLength(SINGLE_RUN_QUESTS.length);
     expect(tracker.list().every((q) => q.complete)).toBe(true);
-    expect(tracker.claimable).toBe(DAILY_QUEST_COUNT);
+    expect(tracker.claimable).toBe(SINGLE_RUN_QUESTS.length);
   });
 
   it('only reports a completion once', () => {
-    const tracker = new QuestTracker(freshProfile());
-    const huge = run({ score: 500_000, wave: 30, maxCombo: 200, perfects: 200, parries: 200, chains: 200, kills: 500, bossKills: 5, ultimatesUsed: 20 });
-    expect(tracker.recordRun(huge).length).toBeGreaterThan(0);
-    expect(tracker.recordRun(huge)).toEqual([]);
+    const { tracker } = withQuests(SINGLE_RUN_QUESTS);
+    expect(tracker.recordRun(HUGE).length).toBeGreaterThan(0);
+    expect(tracker.recordRun(HUGE)).toEqual([]);
+  });
+
+  it('needs several runs for a multi-run objective', () => {
+    const { tracker } = withQuests(['runs3']);
+    expect(tracker.recordRun(HUGE)).toEqual([]);
+    expect(tracker.recordRun(HUGE)).toEqual([]);
+    expect(tracker.recordRun(HUGE)).toHaveLength(1);
+    expect(tracker.list()[0]!.progress).toBe(3);
   });
 
   it('pays a claim exactly once', () => {
-    const profile = freshProfile();
-    const tracker = new QuestTracker(profile);
-    const huge = run({ score: 500_000, wave: 30, maxCombo: 200, perfects: 200, parries: 200, chains: 200, kills: 500, bossKills: 5, ultimatesUsed: 20 });
-    tracker.recordRun(huge);
+    const { profile, tracker } = withQuests(SINGLE_RUN_QUESTS);
+    tracker.recordRun(HUGE);
 
     const target = tracker.list()[0]!;
     const before = profile.balance(target.def.reward.currency);
@@ -161,8 +191,7 @@ describe('the tracker', () => {
   });
 
   it('refuses to claim an unfinished quest', () => {
-    const profile = freshProfile();
-    const tracker = new QuestTracker(profile);
+    const { profile, tracker } = withQuests(SINGLE_RUN_QUESTS);
     const target = tracker.list()[0]!;
     const before = profile.balance(target.def.reward.currency);
     expect(tracker.claim(target.def.id)).toBe(false);
@@ -170,10 +199,9 @@ describe('the tracker', () => {
   });
 
   it('claims everything finished in one call and then has nothing left', () => {
-    const tracker = new QuestTracker(freshProfile());
-    const huge = run({ score: 500_000, wave: 30, maxCombo: 200, perfects: 200, parries: 200, chains: 200, kills: 500, bossKills: 5, ultimatesUsed: 20 });
-    tracker.recordRun(huge);
-    expect(tracker.claimAll()).toBe(DAILY_QUEST_COUNT);
+    const { tracker } = withQuests(SINGLE_RUN_QUESTS);
+    tracker.recordRun(HUGE);
+    expect(tracker.claimAll()).toBe(SINGLE_RUN_QUESTS.length);
     expect(tracker.claimAll()).toBe(0);
     expect(tracker.claimable).toBe(0);
   });

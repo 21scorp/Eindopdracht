@@ -25,7 +25,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 151 unit tests (gacha, combat, economy, quests, textures, engine) |
+| `npm test` | 154 unit tests (gacha, combat, economy, quests, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
@@ -230,7 +230,7 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **151 unit tests** across gacha guarantees, combat mechanics, the wallet and
+- **154 unit tests** across gacha guarantees, combat mechanics, the wallet and
   save migration, daily objectives, the texture contract, and the engine
   primitives. The gacha suite asserts every published guarantee, including the
   50/50 and its make-good; the quest suite asserts a reward can never pay twice.

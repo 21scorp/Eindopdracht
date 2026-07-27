@@ -24,12 +24,13 @@ import { DailyScreen } from './ui/screens/DailyScreen';
 import { HowToPlayScreen } from './ui/screens/HowToPlayScreen';
 import { ChallengeScreen } from './ui/screens/ChallengeScreen';
 import { QuestsScreen } from './ui/screens/QuestsScreen';
+import { textures } from './render/TextureStore';
 import { THREATS } from './data/threats';
 import { GUARDIANS } from './data/guardians';
 import { BANNERS } from './data/banners';
 
 /** Read-only game data, exposed for debugging and the screenshot tooling. */
-const AEGIS_DATA = { THREATS, GUARDIANS, BANNERS } as const;
+const AEGIS_DATA = { THREATS, GUARDIANS, BANNERS, textures } as const;
 
 function fail(message: string, err?: unknown): never {
   console.error(message, err);

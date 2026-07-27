@@ -77,13 +77,30 @@ interface AtlasJson {
   meta?: { image?: string; scale?: string | number };
 }
 
-const TINT_CACHE_LIMIT = 220;
+/**
+ * The tint cache is budgeted in *pixels*, not entries. Two hundred 64x64 spark
+ * variants cost almost nothing; two hundred 512x512 sheets are two hundred
+ * megabytes of backing store. Roughly 16MB at four bytes a pixel.
+ */
+const TINT_PIXEL_BUDGET = 4_000_000;
+
+/**
+ * Tint colours are quantised before they become a cache key.
+ *
+ * An animated accent — the arena crossfading to gold as Overdrive engages —
+ * produces a different hex string every frame, so an exact-match cache
+ * allocates a fresh canvas per frame and evicts something useful to store it.
+ * Rounding each channel to the nearest 8 collapses that ramp onto a few dozen
+ * keys and is not perceptible.
+ */
+const TINT_QUANTISE = 8;
 
 export class TextureStore {
   private textures = new Map<string, Texture>();
   private generators = new Map<string, TextureGenerator>();
   private animations = new Map<string, AnimationDef>();
   private tintCache = new Map<string, HTMLCanvasElement>();
+  private tintPixels = 0;
   private missing = new Set<string>();
 
   /** Set once an atlas has been loaded; used by tooling and the debug overlay. */
@@ -208,7 +225,7 @@ export class TextureStore {
     }
 
     this.atlasLoaded = true;
-    this.tintCache.clear();
+    this.clearTints();
     console.info(`[TextureStore] atlas loaded: ${count} frames from ${jsonUrl}`);
   }
 
@@ -296,9 +313,16 @@ export class TextureStore {
    * standard Canvas2D tinting trick, cached because it is not cheap.
    */
   private getTinted(tex: Texture, tint: string, amount: number): HTMLCanvasElement {
-    const cacheKey = `${tex.key}|${tint}|${amount.toFixed(2)}`;
+    const colour = quantiseColour(tint);
+    const step = Math.round(Math.max(0, Math.min(1, amount)) * 16) / 16;
+    const cacheKey = `${tex.key}|${colour}|${step}`;
     const cached = this.tintCache.get(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      // Refresh insertion order so eviction is least-recently-used.
+      this.tintCache.delete(cacheKey);
+      this.tintCache.set(cacheKey, cached);
+      return cached;
+    }
 
     const c = document.createElement('canvas');
     c.width = Math.max(1, Math.ceil(tex.sw));
@@ -306,16 +330,21 @@ export class TextureStore {
     const ctx = c.getContext('2d')!;
     ctx.drawImage(tex.image, tex.sx, tex.sy, tex.sw, tex.sh, 0, 0, c.width, c.height);
     ctx.globalCompositeOperation = 'source-atop';
-    ctx.globalAlpha = Math.max(0, Math.min(1, amount));
-    ctx.fillStyle = tint;
+    ctx.globalAlpha = step;
+    ctx.fillStyle = colour;
     ctx.fillRect(0, 0, c.width, c.height);
 
-    if (this.tintCache.size >= TINT_CACHE_LIMIT) {
-      // Cheap eviction: drop the oldest insertion.
-      const first = this.tintCache.keys().next().value;
-      if (first !== undefined) this.tintCache.delete(first);
-    }
+    const pixels = c.width * c.height;
     this.tintCache.set(cacheKey, c);
+    this.tintPixels += pixels;
+
+    while (this.tintPixels > TINT_PIXEL_BUDGET && this.tintCache.size > 1) {
+      const oldestKey = this.tintCache.keys().next().value;
+      if (oldestKey === undefined || oldestKey === cacheKey) break;
+      const oldest = this.tintCache.get(oldestKey)!;
+      this.tintPixels -= oldest.width * oldest.height;
+      this.tintCache.delete(oldestKey);
+    }
     return c;
   }
 
@@ -323,21 +352,34 @@ export class TextureStore {
   invalidate(predicate?: (key: string) => boolean): void {
     if (!predicate) {
       for (const [key, tex] of this.textures) if (!tex.fromAtlas) this.textures.delete(key);
-      this.tintCache.clear();
+      this.clearTints();
       return;
     }
     for (const [key, tex] of this.textures) {
       if (!tex.fromAtlas && predicate(key)) this.textures.delete(key);
     }
-    this.tintCache.clear();
+    this.clearTints();
   }
 
-  get stats(): { generated: number; generators: number; animations: number; tints: number; atlas: boolean } {
+  private clearTints(): void {
+    this.tintCache.clear();
+    this.tintPixels = 0;
+  }
+
+  get stats(): {
+    generated: number;
+    generators: number;
+    animations: number;
+    tints: number;
+    tintMegapixels: number;
+    atlas: boolean;
+  } {
     return {
       generated: this.textures.size,
       generators: this.generators.size,
       animations: this.animations.size,
       tints: this.tintCache.size,
+      tintMegapixels: Math.round((this.tintPixels / 1_000_000) * 100) / 100,
       atlas: this.atlasLoaded,
     };
   }
@@ -362,6 +404,19 @@ export function canvasToTexture(key: string, canvas: HTMLCanvasElement, ax = 0.5
     h: canvas.height,
     fromAtlas: false,
   };
+}
+
+/** Round each channel to a coarser grid so near-identical tints share a key. */
+function quantiseColour(hex: string): string {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h[0]! + h[0]! + h[1]! + h[1]! + h[2]! + h[2]!;
+  const n = parseInt(h.slice(0, 6), 16);
+  if (!Number.isFinite(n)) return hex;
+  const q = (v: number): number => Math.min(255, Math.round(v / TINT_QUANTISE) * TINT_QUANTISE);
+  const r = q((n >> 16) & 255);
+  const g = q((n >> 8) & 255);
+  const b = q(n & 255);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
 function normaliseFrameName(name: string, prefix: string): string {
