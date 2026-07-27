@@ -192,13 +192,25 @@
   width: 100% !important;
   height: 100% !important;
   object-fit: cover;
-  object-position: center 32%;
+  object-position: center 30%;
 }
 
+/*
+ * The caption sits on top of the art, so the scrim has to start earlier and
+ * land harder than it looks like it needs to. Without it the Guardian's name
+ * reads *through* the sigil behind it, which looks like a layering accident
+ * rather than a composition — and a real sprite portrait will only be busier.
+ */
 .hero__scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(4, 5, 11, 0) 30%, rgba(4, 5, 11, 0.86) 78%, rgba(4, 5, 11, 0.97) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(4, 5, 11, 0) 16%,
+    rgba(4, 5, 11, 0.5) 44%,
+    rgba(4, 5, 11, 0.9) 68%,
+    rgba(4, 5, 11, 0.99) 100%
+  );
 }
 
 .hero__info {
@@ -726,6 +738,9 @@
   padding: 18px;
   display: flex;
   flex-direction: column;
+  /* The rarity chip is a chip, not a banner: without this it stretches to the
+     full column width and reads as a section header. */
+  align-items: flex-start;
   gap: 6px;
 }
 
@@ -1906,11 +1921,17 @@
   color: var(--parry);
 }
 
+/*
+ * Three across, not four. Seven days over four columns leaves two empty cells
+ * on the second row, which reads as a layout mistake rather than as a week;
+ * three columns gives 3 + 3 and lets day seven take the full width it deserves.
+ */
 .daily__track {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
+
 
 .daily__cell {
   position: relative;
@@ -1935,7 +1956,7 @@
 }
 
 .daily__cell.is-highlight {
-  grid-column: span 4;
+  grid-column: 1 / -1;
   flex-direction: row;
   justify-content: center;
   gap: 10px;
@@ -2485,4 +2506,27 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+}
+
+/* Cold start: one line about the game where the records will go. */
+.home__stats--empty {
+  grid-template-columns: 1fr;
+}
+
+.home__firstrun {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: rgba(17, 23, 41, 0.6);
+  border: 1px solid var(--line-soft);
+}
+
+.home__firstruntext {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0;
+  text-wrap: pretty;
 }

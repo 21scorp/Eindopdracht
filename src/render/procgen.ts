@@ -500,7 +500,7 @@ function guardianPortrait(rarity: Rarity, shape: SigilShape, hue: string, w = 51
   ctx.fillRect(0, 0, w, h);
 
   // Floor light pooling under the sigil.
-  const pool = ctx.createRadialGradient(w / 2, h * 0.62, 0, w / 2, h * 0.62, w * 0.72);
+  const pool = ctx.createRadialGradient(w / 2, h * 0.5, 0, w / 2, h * 0.5, w * 0.72);
   pool.addColorStop(0, alpha(hue, 0.34));
   pool.addColorStop(0.5, alpha(hue, 0.1));
   pool.addColorStop(1, alpha(hue, 0));
@@ -529,8 +529,14 @@ function guardianPortrait(rarity: Rarity, shape: SigilShape, hue: string, w = 51
   ctx.restore();
 
   // Rear halo arc.
+  //
+  // The subject sits at 37% of the height, not at the centre: every surface
+  // that shows a portrait — the home hero, the banner, the roster detail —
+  // overlays a name and a tagline across the bottom third. Composing to the
+  // middle means the caption always lands on the subject's face. Sprite
+  // portraits must follow the same rule; see docs/SPRITES.md.
   ctx.save();
-  ctx.translate(w / 2, h * 0.46);
+  ctx.translate(w / 2, h * 0.37);
   ctx.globalCompositeOperation = 'lighter';
   radialGlow(ctx, 0, 0, w * 0.44, hue, 0.4, 2.6);
   ctx.strokeStyle = alpha(style.accent, 0.55);
@@ -545,19 +551,19 @@ function guardianPortrait(rarity: Rarity, shape: SigilShape, hue: string, w = 51
 
   // The sigil itself.
   ctx.save();
-  ctx.translate(w / 2, h * 0.46);
-  const R = w * 0.26;
+  ctx.translate(w / 2, h * 0.37);
+  const R = w * 0.25;
   ctx.globalCompositeOperation = 'lighter';
   drawSigil(ctx, shape, R, hue, style.accent);
   ctx.restore();
 
   // Rarity-tinted edge treatment.
   ctx.save();
-  const edge = ctx.createLinearGradient(0, h, 0, h * 0.55);
+  const edge = ctx.createLinearGradient(0, h, 0, h * 0.48);
   edge.addColorStop(0, alpha(style.color, 0.35));
   edge.addColorStop(1, alpha(style.color, 0));
   ctx.fillStyle = edge;
-  ctx.fillRect(0, h * 0.55, w, h * 0.45);
+  ctx.fillRect(0, h * 0.48, w, h * 0.52);
   ctx.restore();
 
   return c;

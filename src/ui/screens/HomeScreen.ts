@@ -105,7 +105,14 @@ export class HomeScreen extends Screen {
 
     // Open the daily reward on arrival, once per day. It is the one thing the
     // player should not have to go looking for.
-    if (this.app.profile.dailyAvailable && !this.dailyShown) {
+    //
+    // Except on the very first visit. Handing someone a login bonus before they
+    // have played a single wave is the most free-to-play thing a game can do,
+    // and it answers a question nobody asked yet. A brand-new account gets the
+    // game first; the reward is still there, badged, the moment they come back
+    // from their first run.
+    const firstVisit = this.app.profile.data.stats.runs === 0;
+    if (this.app.profile.dailyAvailable && !this.dailyShown && !firstVisit) {
       this.dailyShown = true;
       window.setTimeout(() => this.app.screens.push('daily'), 420);
     }
@@ -168,16 +175,37 @@ export class HomeScreen extends Screen {
     );
 
     // Quick stats.
+    //
+    // A brand-new account has nothing to put here, and four zeroes in a row is
+    // the worst possible first impression: it reads as an empty save file
+    // rather than as a game about to start. Until there is a run to report,
+    // this space says what the game is instead of what you have not done.
     clear(this.statsRow);
-    this.statsRow.append(
-      statRow('Best score', fmtCompact(profile.data.stats.bestScore), true),
-      statRow('Best wave', String(profile.data.stats.bestWave)),
-      statRow('Best combo', String(profile.data.stats.bestCombo)),
-      statRow('Integrity', String(stat.integrity)),
-    );
+    if (profile.data.stats.runs === 0) {
+      this.statsRow.classList.add('home__stats--empty');
+      this.statsRow.append(
+        h(
+          'div',
+          { class: 'home__firstrun' },
+          h('span', { class: 't-label', text: 'First run' }),
+          h('p', {
+            class: 'home__firstruntext',
+            text: 'Drag to move the shield. Tap to pulse. Nothing else — everything after that is timing.',
+          }),
+        ),
+      );
+    } else {
+      this.statsRow.classList.remove('home__stats--empty');
+      this.statsRow.append(
+        statRow('Best score', fmtCompact(profile.data.stats.bestScore), true),
+        statRow('Best wave', String(profile.data.stats.bestWave)),
+        statRow('Best combo', String(profile.data.stats.bestCombo)),
+        statRow('Integrity', String(stat.integrity)),
+      );
 
-    if (profile.data.daily.streak > 1) {
-      this.statsRow.appendChild(statRow('Day streak', `${profile.data.daily.streak}`, true));
+      if (profile.data.daily.streak > 1) {
+        this.statsRow.appendChild(statRow('Day streak', `${profile.data.daily.streak}`, true));
+      }
     }
 
     const quests = this.app.quests.list();

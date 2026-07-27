@@ -170,9 +170,17 @@ eclipse  zenith                          (mythic)
 ```
 
 **Portrait composition matters.** Portraits are cropped with
-`object-fit: cover` and `object-position: center 32%`, and the bottom ~40% is
+`object-fit: cover` and `object-position: center 30%`, and the bottom ~40% is
 covered by a scrim carrying the name and tagline. Put the face and the read of
-the character in the **upper two thirds**. Keep the bottom quiet.
+the character in the **upper two thirds** — the procedural portraits centre
+their subject at **37% of the height** and you should match that. Keep the
+bottom quiet.
+
+This is not a style note. Composing to the middle of the frame puts the
+Guardian's name across the subject's face on the home screen, the banner and
+the roster detail all at once, and it looks like a layering bug rather than a
+design. If a portrait has to be centred, extend the quiet space downward rather
+than moving the subject.
 
 **Emblems must read at 44px.** They are used as small as a chip icon. One strong
 shape, high contrast, no fine detail.

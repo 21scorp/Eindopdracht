@@ -56,17 +56,18 @@ try {
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1600);
 
-  // A fresh context means a fresh profile, so the daily reward opens itself.
-  await shot('00-daily');
-  const dailyClaimed = await page.evaluate(() => {
-    const btn = [...document.querySelectorAll('button')].find((b) => /^CLAIM/.test(b.textContent ?? ''));
-    if (!btn) return false;
-    btn.click();
-    return true;
-  });
-  console.log('  daily reward claimed:', dailyClaimed);
-  if (!dailyClaimed) throw new Error('daily reward did not open for a new profile');
-  await page.waitForTimeout(1400);
+  // A brand-new account must land on the game, not on a login bonus. The daily
+  // sheet is deliberately held back until the player has finished a run.
+  await shot('00-home-cold');
+  const cold = await page.evaluate(() => ({
+    screen: window.aegis.screens.currentName,
+    dailyOpen: !!document.querySelector('[data-screen="daily"].is-active'),
+    runs: window.aegis.profile.data.stats.runs,
+  }));
+  console.log('  cold start:', JSON.stringify(cold));
+  if (cold.runs !== 0) throw new Error('the smoke profile was not fresh');
+  if (cold.screen !== 'home') throw new Error(`a new account landed on "${cold.screen}" instead of home`);
+  if (cold.dailyOpen) throw new Error('the daily reward opened before the player had played anything');
   await shot('01-home');
 
   // --- diagnostics from inside the app -------------------------------------
@@ -274,6 +275,21 @@ try {
   if (buildShown.taken > 0 && buildShown.chips !== buildShown.taken) {
     throw new Error(`results showed ${buildShown.chips} resonance chips for ${buildShown.taken} cards`);
   }
+
+  // --- the daily reward, now that a run has happened -------------------------
+  log('returning home after the first run');
+  await page.evaluate(() => window.aegis.showMenu('home'));
+  await page.waitForTimeout(1100);
+  await shot('04c-daily');
+  const dailyClaimed = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('button')].find((b) => /^CLAIM/.test(b.textContent ?? ''));
+    if (!btn) return false;
+    btn.click();
+    return true;
+  });
+  console.log('  daily reward claimed:', dailyClaimed);
+  if (!dailyClaimed) throw new Error('the daily reward did not open after the first run');
+  await page.waitForTimeout(900);
 
   // --- summon ---------------------------------------------------------------
   log('opening summon');
