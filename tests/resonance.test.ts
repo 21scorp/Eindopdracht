@@ -236,6 +236,20 @@ describe('a session taking cards', () => {
     expect(s.mirror).toBe(true);
   });
 
+  it('keeps the second shield up frame after frame', () => {
+    // Regression: the Ultimate teardown ran every frame and cleared the same
+    // flag TWIN GUARD raises, so the card silently did nothing from the next
+    // frame onward.
+    s.takeResonance('twin-guard');
+    for (let i = 0; i < 240; i++) s.update(1 / 120);
+    expect(s.mirror).toBe(true);
+  });
+
+  it('does not leave the second shield up for a run that did not take it', () => {
+    for (let i = 0; i < 120; i++) s.update(1 / 120);
+    expect(s.mirror).toBe(false);
+  });
+
   it('keeps the shield inside sane bounds however many cards stack', () => {
     for (const id of ['wide-guard', 'focus', 'snap-turn', 'pulse-battery']) s.takeResonance(id);
     expect(s.stats.arc).toBeGreaterThan(0.25);

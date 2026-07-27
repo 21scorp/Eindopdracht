@@ -1109,10 +1109,22 @@ export class GameSession {
     }
   }
 
+  /**
+   * Put the shield back to whatever the *run* says it should be.
+   *
+   * MIRROR the Ultimate and TWIN GUARD the Resonance card raise the same flag,
+   * so an Ultimate ending must not switch off a card the player is holding —
+   * which is exactly what it did: taking TWIN GUARD appeared to do nothing,
+   * because this ran on the very next frame and cleared it.
+   */
+  private restoreShieldState(): void {
+    this.fullCircle = false;
+    this.mirror = this.mods.mirror;
+  }
+
   private updateUltimate(dt: number): void {
     if (this.ult.timer <= 0) {
-      if (this.fullCircle) this.fullCircle = false;
-      if (this.mirror) this.mirror = false;
+      this.restoreShieldState();
       if (this.ult.id && this.ult.gatherTimer <= 0) this.ult.id = null;
       return;
     }
@@ -1147,8 +1159,7 @@ export class GameSession {
     }
 
     if (this.ult.timer <= 0) {
-      if (this.fullCircle) this.fullCircle = false;
-      if (this.mirror) this.mirror = false;
+      this.restoreShieldState();
       this.ult.id = null;
     }
   }
