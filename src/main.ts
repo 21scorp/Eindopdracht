@@ -26,12 +26,19 @@ import { ChallengeScreen } from './ui/screens/ChallengeScreen';
 import { QuestsScreen } from './ui/screens/QuestsScreen';
 import { ResonanceScreen } from './ui/screens/ResonanceScreen';
 import { textures } from './render/TextureStore';
+import { renderShareCard } from './meta/share';
 import { THREATS } from './data/threats';
 import { GUARDIANS } from './data/guardians';
 import { BANNERS } from './data/banners';
 
-/** Read-only game data, exposed for debugging and the screenshot tooling. */
-const AEGIS_DATA = { THREATS, GUARDIANS, BANNERS, textures } as const;
+/**
+ * Read-only game data, exposed for debugging and the screenshot tooling.
+ *
+ * `renderShareCard` is in here because the card is the single most public thing
+ * this game produces and the only way to check it is to draw one — it is a
+ * canvas, so no DOM sweep can see it, and it takes a name a player chooses.
+ */
+const AEGIS_DATA = { THREATS, GUARDIANS, BANNERS, textures, renderShareCard } as const;
 
 function fail(message: string, err?: unknown): never {
   console.error(message, err);

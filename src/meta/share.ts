@@ -122,8 +122,10 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
 
   // --- score ----------------------------------------------------------------
   const scoreText = stats.score.toLocaleString('en-US');
-  const scoreSize = scoreText.length > 8 ? 150 : scoreText.length > 6 ? 178 : 204;
-  ctx.font = `700 ${scoreSize}px ${FONT}`;
+  // Ten digits with separators is thirteen characters, and the old length
+  // buckets stopped caring past eight — a billion-point run drew straight
+  // through the frame and off both edges of the card.
+  const scoreSize = fitFont(ctx, scoreText, CARD_W - 150, 204);
   const scoreY = CARD_H * 0.545;
 
   ctx.save();
@@ -176,7 +178,9 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
   // that starts an argument in the replies.
   const held = (stats.resonance ?? []).map((id) => getResonance(id)).filter((r): r is ResonanceDef => !!r);
   if (held.length > 0) {
-    const rowY = stripY + 140;
+    // Clear of the Guardian emblem below: at +140 the icon row's bottom edge
+    // ran under the emblem's glow.
+    const rowY = stripY + 126;
     const icon = 46;
     const gap = 22;
     // Icons only, centred: names at this size would either wrap or shrink to
@@ -205,8 +209,8 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
   ctx.drawImage(emblem.image, emblem.sx, emblem.sy, emblem.sw, emblem.sh, CARD_W / 2 - es / 2, badgeY - es / 2, es, es);
   ctx.restore();
 
-  ctx.font = `700 46px ${FONT}`;
   ctx.letterSpacing = '6px';
+  fitFont(ctx, g.name, CARD_W - 200, 46);
   ctx.fillStyle = '#EAF0FF';
   ctx.fillText(g.name, CARD_W / 2, badgeY + 108);
   ctx.font = `600 20px ${FONT}`;
@@ -227,11 +231,15 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
   }
 
   // --- footer ---------------------------------------------------------------
-  ctx.font = `600 22px ${FONT}`;
   ctx.letterSpacing = '5px';
   ctx.fillStyle = hexA('#93A0BE', 0.95);
   const cta = opts.callToAction ?? 'SAME WAVES · YOUR TURN';
-  ctx.fillText(`${opts.playerName.toUpperCase()}   ·   ${cta}`, CARD_W / 2, CARD_H - 46);
+  // The rename field stops at 14 characters. An imported save code is under no
+  // obligation to, and this is the one line on the card a stranger controls.
+  const who = opts.playerName.toUpperCase().trim().slice(0, 18);
+  const footer = `${who}   ·   ${cta}`;
+  fitFont(ctx, footer, CARD_W - 120, 22, 600);
+  ctx.fillText(footer, CARD_W / 2, CARD_H - 46);
   ctx.letterSpacing = '0px';
 
   // Personal-best flourish, or the day number when this was the shared seed —
@@ -346,6 +354,25 @@ function withTimeout<T>(promise: Promise<T> | undefined, ms = 1200): Promise<T |
     promise,
     new Promise<void>((_, reject) => setTimeout(() => reject(new Error('clipboard timed out')), ms)),
   ]);
+}
+
+/**
+ * Set a font size that makes `text` fit inside `maxWidth`, and report it.
+ *
+ * `fillText` neither wraps nor clips: text that does not fit simply runs off
+ * the edge of the card. Every string on this card is either a number that can
+ * reach ten digits or a name a player typed, and a card that is about to be
+ * posted somewhere public is the last place to discover that. Measure with the
+ * letter-spacing already set — it is worth 5px a character here, which is most
+ * of the width on a spaced-out footer.
+ */
+function fitFont(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, size: number, weight = 700): number {
+  let px = size;
+  for (;;) {
+    ctx.font = `${weight} ${px}px ${FONT}`;
+    if (px <= 14 || ctx.measureText(text).width <= maxWidth) return px;
+    px -= 2;
+  }
 }
 
 function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
