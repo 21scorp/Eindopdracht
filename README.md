@@ -44,6 +44,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | `node tools/viewports.mjs` | Every screen at six sizes, failing on any overflow |
 | `node tools/layout.mjs` | Every screen at three widths, then again under a rich account, failing on anything that clips or overlaps |
 | `node tools/hud.mjs` | The in-run HUD at its widest state, on the shapes with the least room |
+| `node tools/share.mjs` | Renders the share card at hostile values and reads back the pixels |
 | `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
 | `node tools/soak.mjs 180` | Play for three minutes and watch for leaks |
 | `node tools/a11y.mjs` | Names, targets, contrast and focus on every screen |
@@ -388,6 +389,12 @@ where they were.
   fails if a thumb target leaves the screen, overlaps another one, overlaps the
   ring you are defending, or is smaller than a thumb. Pause was a 29px target on
   a 320px phone: the one button you reach for while panicking.
+- **`node tools/share.mjs`** renders the share card at the values a card has to
+  survive — a ten-digit score, a five-digit combo, a full hand of Resonance, and
+  a name far longer than the rename field allows, because an imported save code
+  is under no obligation to respect it — and then reads the pixels back, failing
+  if anything painted outside the frame. `fillText` neither wraps nor clips, so
+  every way this broke was silent, on the one image that gets posted in public.
 - **`node tools/soak.mjs [seconds]`** plays continuously for several minutes —
   through escalation, boss fights, drafts, deaths and restarts — sampling heap,
   texture cache, live entities and frame rate, and fails on a leak or on a game
