@@ -43,6 +43,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | `node tools/a11y.mjs` | Names, targets, contrast and focus on every screen |
 | `node tools/offline.mjs` | Register, cache, cut the network, and play anyway |
 | `node tools/icons.mjs` | Regenerate the app icons |
+| `node tools/og.mjs` | Re-render the 1200x630 social preview from the live game |
 
 No backend. No accounts. Save data lives in `localStorage` and can be exported
 as a code from Settings. Open the game in two tabs and the one that earns
