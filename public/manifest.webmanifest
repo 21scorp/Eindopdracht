@@ -1,0 +1,48 @@
+{
+  "name": "AEGIS — Hold the Line",
+  "short_name": "AEGIS",
+  "description": "One thumb. One shield. Deflect everything. Collect Guardians, chain perfect parries, and see how deep you can hold the line.",
+  "id": "/aegis/",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "portrait",
+  "background_color": "#04050B",
+  "theme_color": "#04050B",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Hold the line",
+      "short_name": "Play",
+      "description": "Start a run immediately",
+      "url": "./?play=1"
+    },
+    {
+      "name": "Summon",
+      "short_name": "Summon",
+      "description": "Open the summon banner",
+      "url": "./?screen=banner"
+    }
+  ]
+}

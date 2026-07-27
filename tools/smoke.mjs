@@ -229,6 +229,55 @@ try {
 
   const finalStats = await page.evaluate(() => window.aegis.lastRun?.stats ?? null);
   console.log('  run stats:', JSON.stringify(finalStats));
+
+  // --- challenge link -------------------------------------------------------
+  // The viral loop: a link reproduces the challenger's exact wave sequence.
+  log('following a challenge link');
+  const token = await page.evaluate(() => {
+    const stats = window.aegis.lastRun?.stats;
+    if (!stats) return null;
+    // Reach the encoder the way the share path does, through the app.
+    return { seed: stats.seed, score: stats.score, wave: stats.wave, guardianId: stats.guardianId };
+  });
+  if (!token) throw new Error('no run to build a challenge from');
+
+  const encoded = Buffer.from(
+    ['1', token.seed, String(token.score + 1000), String(token.wave), token.guardianId, 'RIVAL'].join('|'),
+    'utf8',
+  )
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+
+  await page.goto(`${BASE}?c=${encoded}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1500);
+  await shot('14-challenge');
+
+  const onChallenge = await page.evaluate(() => ({
+    screen: window.aegis.screens.currentName,
+    pending: !!window.aegis.pendingChallenge,
+    urlHasParam: location.search.includes('c='),
+  }));
+  console.log('  challenge landing:', JSON.stringify(onChallenge));
+  if (onChallenge.screen !== 'challenge') throw new Error('a challenge link did not open the challenge screen');
+  if (onChallenge.urlHasParam) throw new Error('the challenge parameter was not cleared from the URL');
+
+  await page.getByRole('button', { name: /^ACCEPT$/i }).click();
+  await page.waitForTimeout(1800);
+  await shot('15-challenge-run');
+  const inChallenge = await page.evaluate(() => ({
+    mode: window.aegis.mode,
+    seed: window.aegis.session.seed,
+    target: window.aegis.hud.challengeTarget,
+  }));
+  console.log('  challenge run:', JSON.stringify(inChallenge));
+  if (inChallenge.seed !== token.seed) throw new Error('the challenge run used a different seed');
+  if (inChallenge.target <= 0) throw new Error('the HUD is not showing the challenge target');
+
+  await page.evaluate(() => window.aegis.session.end());
+  await page.waitForTimeout(1400);
+  await shot('16-challenge-result');
 } catch (err) {
   errors.push(`test failure: ${err.message}`);
   await page.screenshot({ path: join(OUT, 'zz-failure.png') }).catch(() => {});

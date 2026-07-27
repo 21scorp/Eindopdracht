@@ -22,6 +22,7 @@ import { RatesScreen } from './ui/screens/RatesScreen';
 import { PullResultScreen } from './ui/screens/PullResultScreen';
 import { DailyScreen } from './ui/screens/DailyScreen';
 import { HowToPlayScreen } from './ui/screens/HowToPlayScreen';
+import { ChallengeScreen } from './ui/screens/ChallengeScreen';
 
 function fail(message: string, err?: unknown): never {
   console.error(message, err);
@@ -61,6 +62,7 @@ async function main(): Promise<void> {
   app.screens.register(new PullResultScreen(app));
   app.screens.register(new DailyScreen(app));
   app.screens.register(new HowToPlayScreen(app));
+  app.screens.register(new ChallengeScreen(app));
 
   // Hardware/browser back and Escape both mean "up one level".
   window.addEventListener('keydown', (e) => {
@@ -90,10 +92,29 @@ async function main(): Promise<void> {
   );
 
   await app.boot();
-  app.showMenu('home');
+  // A shared link lands on the challenge, not the home screen: the fastest path
+  // from "someone sent me this" to "I am playing" is one tap.
+  app.showMenu(app.pendingChallenge ? 'challenge' : 'home');
 
   // Expose for debugging without shipping a dev overlay.
   (window as unknown as { aegis: App }).aegis = app;
+
+  registerServiceWorker();
+}
+
+/**
+ * Offline support and install-to-home-screen.
+ *
+ * Registered after boot so it never competes with the first frame for
+ * bandwidth, and skipped in dev where a cached shell only gets in the way.
+ */
+function registerServiceWorker(): void {
+  if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { scope: './' }).catch((err) => {
+      console.info('[PWA] service worker not registered', err);
+    });
+  });
 }
 
 void main();

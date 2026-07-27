@@ -17,6 +17,7 @@ import { textures } from '../render/TextureStore';
 import { getGuardian } from '../data/guardians';
 import type { RunStats } from '../game/events';
 import type { App } from '../app/App';
+import { challengeUrl } from './challenge';
 
 const CARD_W = 1080;
 const CARD_H = 1350;
@@ -200,7 +201,7 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
   ctx.font = `600 22px ${FONT}`;
   ctx.letterSpacing = '5px';
   ctx.fillStyle = hexA('#93A0BE', 0.95);
-  const cta = opts.callToAction ?? 'BEAT THIS';
+  const cta = opts.callToAction ?? 'SAME WAVES · YOUR TURN';
   ctx.fillText(`${opts.playerName.toUpperCase()}   ·   ${cta}`, CARD_W / 2, CARD_H - 78);
   ctx.letterSpacing = '0px';
 
@@ -243,12 +244,23 @@ export async function shareRun(app: App, stats: RunStats): Promise<'share' | 'cl
   if (!blob) throw new Error('Could not encode the share card');
 
   const file = new File([blob], `aegis-${stats.score}.png`, { type: 'image/png' });
-  const text = `${stats.score.toLocaleString('en-US')} on AEGIS — wave ${stats.wave}, ${stats.maxCombo} combo. Beat it.`;
+
+  // The link is the point. A screenshot is something to look at; a challenge
+  // link drops the reader into the *same* wave sequence with the score to beat
+  // already on screen.
+  const url = challengeUrl({
+    seed: stats.seed,
+    score: stats.score,
+    wave: stats.wave,
+    name: app.profile.data.playerName,
+    guardianId: stats.guardianId,
+  });
+  const text = `${stats.score.toLocaleString('en-US')} on AEGIS — wave ${stats.wave}, ${stats.maxCombo} combo. Same waves, your turn: ${url}`;
 
   const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
   if (nav.share && nav.canShare?.({ files: [file] })) {
     try {
-      await nav.share({ files: [file], title: 'AEGIS', text });
+      await nav.share({ files: [file], title: 'AEGIS', text, url });
       return 'share';
     } catch (err) {
       if ((err as DOMException)?.name === 'AbortError') return 'share';
@@ -257,19 +269,25 @@ export async function shareRun(app: App, stats: RunStats): Promise<'share' | 'cl
 
   if (navigator.clipboard && 'ClipboardItem' in window) {
     try {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob, 'text/plain': new Blob([text], { type: 'text/plain' }) }),
+      ]);
       return 'clipboard';
     } catch {
       // fall through to download
     }
   }
 
-  const url = URL.createObjectURL(blob);
+  // Last resort: the image downloads and the link goes to the clipboard, so the
+  // player still has both halves of the post.
+  await navigator.clipboard?.writeText(text).catch(() => {});
+
+  const objectUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
+  a.href = objectUrl;
   a.download = file.name;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 4000);
   return 'download';
 }
 

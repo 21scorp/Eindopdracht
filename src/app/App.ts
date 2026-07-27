@@ -28,12 +28,19 @@ import { Hud } from '../game/Hud';
 import { Coach } from '../game/Coach';
 import type { RunStats } from '../game/events';
 import { Profile } from '../meta/Profile';
+import { clearChallengeFromUrl, evaluateChallenge, readChallengeFromUrl, type Challenge } from '../meta/challenge';
 import { ScreenStack } from '../ui/Screen';
 import { audio } from '../audio/AudioEngine';
 import { GameAudio } from '../audio/GameAudio';
 import { haptics } from '../audio/haptics';
 
 export type AppMode = 'menu' | 'playing' | 'cinema';
+
+export interface ChallengeResult {
+  challenge: Challenge;
+  outcome: 'beaten' | 'missed';
+  margin: number;
+}
 
 export interface RunRewards {
   cores: number;
@@ -66,6 +73,11 @@ export class App {
 
   /** Idle-arena state so the menu background stays alive. */
   private menuTime = 0;
+
+  /** A challenge read from the URL, waiting to be accepted. */
+  pendingChallenge: Challenge | null = null;
+  /** The challenge the current run is attempting, if any. */
+  activeChallenge: Challenge | null = null;
 
   private lastRunStats: RunStats | null = null;
   private lastRunRewards: RunRewards | null = null;
@@ -132,6 +144,11 @@ export class App {
   // ------------------------------------------------------------------- boot
 
   async boot(): Promise<void> {
+    // A challenge link is the first thing a new player may ever see, so it is
+    // read before anything else decides what screen to open.
+    this.pendingChallenge = readChallengeFromUrl();
+    clearChallengeFromUrl();
+
     // If a real sprite atlas has been dropped into /public/assets, it silently
     // takes over every texture key. Otherwise the procedural art is used.
     await textures.tryLoadAtlas('assets/atlas.json');
@@ -300,11 +317,25 @@ export class App {
     this.screens.replace(screen);
   }
 
-  startRun(): void {
+  /** Replay a challenger's exact wave sequence. */
+  startChallengeRun(challenge: Challenge): void {
+    this.activeChallenge = challenge;
+    this.pendingChallenge = null;
+    this.startRun(challenge.seed);
+  }
+
+  clearChallenge(): void {
+    this.pendingChallenge = null;
+    this.activeChallenge = null;
+  }
+
+  startRun(seedOverride?: string): void {
     const id = this.profile.equipped;
     const guardian = getGuardian(id);
     const owned = this.profile.owned(id);
-    const seed = `${this.profile.data.playerId}-${Date.now()}`;
+    const seed = seedOverride ?? `${this.profile.data.playerId}-${Date.now()}`;
+    if (!seedOverride) this.activeChallenge = null;
+    this.hud.challengeTarget = this.activeChallenge?.score ?? 0;
 
     this.screens.closeAll();
     this.mode = 'playing';
@@ -345,11 +376,20 @@ export class App {
   private handleRunEnd(stats: RunStats): void {
     this.lastRunStats = stats;
     this.lastRunRewards = this.payoutRun(stats);
+    this.lastChallengeResult = this.activeChallenge
+      ? { challenge: this.activeChallenge, ...evaluateChallenge(this.activeChallenge, stats.score) }
+      : null;
     this.mode = 'menu';
     this.input.suppressed = true;
     this.profile.save();
-    this.screens.replace('results', { stats, rewards: this.lastRunRewards });
+    this.screens.replace('results', {
+      stats,
+      rewards: this.lastRunRewards,
+      challenge: this.lastChallengeResult,
+    });
   }
+
+  private lastChallengeResult: ChallengeResult | null = null;
 
   /** Convert a run into currency and XP. */
   private payoutRun(stats: RunStats): RunRewards {
@@ -399,9 +439,9 @@ export class App {
     };
   }
 
-  get lastRun(): { stats: RunStats; rewards: RunRewards } | null {
+  get lastRun(): { stats: RunStats; rewards: RunRewards; challenge: ChallengeResult | null } | null {
     if (!this.lastRunStats || !this.lastRunRewards) return null;
-    return { stats: this.lastRunStats, rewards: this.lastRunRewards };
+    return { stats: this.lastRunStats, rewards: this.lastRunRewards, challenge: this.lastChallengeResult };
   }
 
   // -------------------------------------------------------------- cinematic

@@ -12,7 +12,7 @@
 import { damp } from '../../core/math';
 import { RARITY_STYLE } from '../../render/palette';
 import { getGuardian } from '../../data/guardians';
-import type { App, RunRewards } from '../../app/App';
+import type { App, ChallengeResult, RunRewards } from '../../app/App';
 import type { RunStats } from '../../game/events';
 import { Screen } from '../Screen';
 import { statRow, textureImg } from '../components';
@@ -29,6 +29,7 @@ export class ResultsScreen extends Screen {
   private shareBtn!: HTMLButtonElement;
   private stats: RunStats | null = null;
   private rewards: RunRewards | null = null;
+  private challenge: ChallengeResult | null = null;
 
   constructor(private readonly app: App) {
     super('results', 'screen screen--overlay results');
@@ -56,17 +57,18 @@ export class ResultsScreen extends Screen {
         'div',
         { class: 'results__actions' },
         this.shareBtn,
-        button('AGAIN', () => this.app.startRun(), { variant: 'primary', class: 'grow' }),
+        button('AGAIN', () => this.again(), { variant: 'primary', class: 'grow' }),
         button('HOME', () => this.app.showMenu('home'), { variant: 'ghost' }),
       ),
     );
   }
 
   protected override onEnter(params?: unknown): void {
-    const p = params as { stats: RunStats; rewards: RunRewards } | undefined;
+    const p = params as { stats: RunStats; rewards: RunRewards; challenge?: ChallengeResult | null } | undefined;
     if (!p) return;
     this.stats = p.stats;
     this.rewards = p.rewards;
+    this.challenge = p.challenge ?? null;
     this.targetScore = p.stats.score;
     this.shownScore = 0;
     this.render();
@@ -82,7 +84,23 @@ export class ResultsScreen extends Screen {
     this.root.style.setProperty('--accent', g.hue);
 
     clear(this.headline);
-    if (rewards.personalBest) {
+    if (this.challenge) {
+      // A challenge result outranks a personal best: it is the reason they are
+      // here, and it is the thing they will reply to.
+      const beaten = this.challenge.outcome === 'beaten';
+      this.headline.append(
+        h('span', {
+          class: `results__badge${beaten ? ' results__badge--best' : ' results__badge--miss'}`,
+          text: beaten ? `BEAT ${this.challenge.challenge.name.toUpperCase()}` : 'CHALLENGE MISSED',
+        }),
+        h('span', {
+          class: 'results__margin t-label',
+          text: beaten
+            ? `by ${fmt(this.challenge.margin)}`
+            : `${fmt(this.challenge.margin)} short of ${fmt(this.challenge.challenge.score)}`,
+        }),
+      );
+    } else if (rewards.personalBest) {
       this.headline.append(h('span', { class: 'results__badge results__badge--best', text: 'NEW PERSONAL BEST' }));
     } else if (stats.wave >= 10) {
       this.headline.append(h('span', { class: 'results__badge', text: `WAVE ${stats.wave} REACHED` }));
@@ -148,17 +166,36 @@ export class ResultsScreen extends Screen {
     this.scoreEl.textContent = fmt(this.shownScore);
   }
 
+  /** Retry the same challenge if there was one, otherwise a fresh run. */
+  private again(): void {
+    const c = this.challenge?.challenge;
+    if (c) this.app.startChallengeRun(c);
+    else this.app.startRun();
+  }
+
   private async share(): Promise<void> {
     if (!this.stats) return;
     this.shareBtn.disabled = true;
     try {
       const { shareRun } = await import('../../meta/share');
-      await shareRun(this.app, this.stats);
+      const how = await shareRun(this.app, this.stats);
+      if (how === 'clipboard') this.notify('Card and challenge link copied.');
+      else if (how === 'download') this.notify('Card saved. The challenge link is on your clipboard.');
     } catch (err) {
       console.warn('[Results] share failed', err);
+      this.notify('Could not build the share card.');
     } finally {
       this.shareBtn.disabled = false;
     }
+  }
+
+  private notify(message: string): void {
+    const el = h('div', { class: 'toast', text: message });
+    this.root.appendChild(el);
+    setTimeout(() => {
+      el.classList.add('is-leaving');
+      setTimeout(() => el.remove(), 300);
+    }, 2600);
   }
 
   override onBack(): boolean {

@@ -34,6 +34,9 @@ export class Hud {
   /** Mirrors the action buttons for left-handed play. */
   mirrored = false;
 
+  /** Score to beat during a challenge run. Zero means no challenge. */
+  challengeTarget = 0;
+
   hit: HudHitAreas = {
     ultimate: { x: 0, y: 0, r: 0 },
     pause: { x: 0, y: 0, r: 0 },
@@ -105,6 +108,28 @@ export class Hud {
     ctx.fillStyle = g;
     ctx.fillText(text, 0, 0);
 
+    // Challenge target, directly under the score, with a bar that fills as you
+    // close on it. A number alone does not convey "nearly there".
+    if (this.challengeTarget > 0) {
+      const p = clamp01(value / this.challengeTarget);
+      const beaten = value >= this.challengeTarget;
+      const w = size * 3.4;
+      const yy = size * 0.62;
+      const barH = Math.max(2, size * 0.045);
+
+      ctx.font = `600 ${size * 0.2}px ${FONT_STACK}`;
+      ctx.letterSpacing = `${size * 0.05}px`;
+      ctx.fillStyle = beaten ? COLORS.heal : COLORS.textDim;
+      ctx.fillText(beaten ? 'TARGET BEATEN' : `TARGET ${formatScore(this.challengeTarget)}`, 0, yy);
+
+      ctx.fillStyle = alpha('#FFFFFF', 0.12);
+      roundRect(ctx, -w / 2, yy + size * 0.12, w, barH, barH / 2);
+      ctx.fill();
+      ctx.fillStyle = beaten ? COLORS.heal : accent;
+      roundRect(ctx, -w / 2, yy + size * 0.12, Math.max(barH, w * p), barH, barH / 2);
+      ctx.fill();
+    }
+
     // Multiplier chip, tucked under the score.
     if (session.multiplier > 1.001) {
       const mSize = size * 0.3;
@@ -112,7 +137,7 @@ export class Hud {
       const label = `x${session.multiplier.toFixed(1).replace(/\.0$/, '')}`;
       const w = ctx.measureText(label).width + mSize * 1.1;
       const h = mSize * 1.6;
-      const yy = size * 0.72;
+      const yy = this.challengeTarget > 0 ? size * 0.9 : size * 0.72;
       ctx.fillStyle = alpha(session.overdrive ? COLORS.overdrive : accent, 0.16);
       ctx.strokeStyle = alpha(session.overdrive ? COLORS.overdrive : accent, 0.6);
       ctx.lineWidth = Math.max(1, mSize * 0.08);

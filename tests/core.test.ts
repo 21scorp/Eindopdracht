@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment happy-dom
+ *
  * Engine primitives.
  *
  * Angle maths and the RNG underpin everything else, so they get direct
@@ -27,6 +29,12 @@ import {
 import { Rng, seedFromString } from '../src/core/Rng';
 import { EventBus } from '../src/core/EventBus';
 import { alpha, hexToRgb, mix, rgbToHex, hsl, RARITY_STYLE, RARITIES } from '../src/render/palette';
+import {
+  decodeChallenge,
+  encodeChallenge,
+  evaluateChallenge,
+  readChallengeFromUrl,
+} from '../src/meta/challenge';
 
 describe('scalar maths', () => {
   it('clamps', () => {
@@ -308,5 +316,47 @@ describe('palette', () => {
       previous = style.drama;
     }
     expect(RARITY_STYLE.mythic.prismatic).toBe(true);
+  });
+});
+
+describe('challenge links', () => {
+  const sample = { seed: 'p_abc123-1700000000000', score: 412_345, wave: 14, name: 'QUINCY', guardianId: 'eclipse' };
+
+  it('round-trips a challenge', () => {
+    const decoded = decodeChallenge(encodeChallenge(sample));
+    expect(decoded).toEqual(sample);
+  });
+
+  it('produces a token that survives a URL', () => {
+    const token = encodeChallenge(sample);
+    expect(token).not.toMatch(/[+/=]/);
+    const url = new URL(`https://example.com/?c=${token}`);
+    expect(decodeChallenge(url.searchParams.get('c')!)).toEqual(sample);
+  });
+
+  it('rejects junk rather than starting a broken run', () => {
+    expect(decodeChallenge('')).toBeNull();
+    expect(decodeChallenge('not-base64!!')).toBeNull();
+    expect(decodeChallenge(btoa('999|seed|1|1|vane|X'))).toBeNull();
+    expect(decodeChallenge(btoa('1|seed'))).toBeNull();
+  });
+
+  it('clamps a hostile payload instead of trusting it', () => {
+    const decoded = decodeChallenge(encodeChallenge({ ...sample, score: -50, wave: -3, name: 'X'.repeat(80) }));
+    expect(decoded!.score).toBe(0);
+    expect(decoded!.wave).toBe(1);
+    expect(decoded!.name.length).toBeLessThanOrEqual(14);
+  });
+
+  it('reads and clears the parameter from a query string', () => {
+    const token = encodeChallenge(sample);
+    expect(readChallengeFromUrl(`?c=${token}`)).toEqual(sample);
+    expect(readChallengeFromUrl('?other=1')).toBeNull();
+  });
+
+  it('scores an attempt against the target', () => {
+    expect(evaluateChallenge(sample, 500_000)).toEqual({ outcome: 'beaten', margin: 87_655 });
+    expect(evaluateChallenge(sample, 400_000)).toEqual({ outcome: 'missed', margin: 12_345 });
+    expect(evaluateChallenge(sample, sample.score)).toEqual({ outcome: 'beaten', margin: 0 });
   });
 });
