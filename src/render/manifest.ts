@@ -57,6 +57,15 @@ export const TEXTURE_MANIFEST: Entry[] = [
   { key: 'ui/prism', width: 96, height: 96, category: 'ui', notes: 'premium currency' },
   { key: 'ui/core', width: 96, height: 96, category: 'ui', notes: 'soft currency' },
   { key: 'ui/shard', width: 96, height: 96, category: 'ui', notes: 'upgrade material' },
+
+  { key: 'res/arc', width: 96, height: 96, category: 'ui', notes: 'resonance: shield shape' },
+  { key: 'res/turn', width: 96, height: 96, category: 'ui', notes: 'resonance: shield tracking' },
+  { key: 'res/pulse', width: 96, height: 96, category: 'ui', notes: 'resonance: pulse' },
+  { key: 'res/perfect', width: 96, height: 96, category: 'ui', notes: 'resonance: precision' },
+  { key: 'res/chain', width: 96, height: 96, category: 'ui', notes: 'resonance: deflection and chains' },
+  { key: 'res/nexus', width: 96, height: 96, category: 'ui', notes: 'resonance: survival' },
+  { key: 'res/score', width: 96, height: 96, category: 'ui', notes: 'resonance: score and economy' },
+  { key: 'res/ult', width: 96, height: 96, category: 'ui', notes: 'resonance: ultimate' },
 ];
 
 const THREAT_SIZES: Record<string, [number, number]> = {

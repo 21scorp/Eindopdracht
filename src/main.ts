@@ -24,6 +24,7 @@ import { DailyScreen } from './ui/screens/DailyScreen';
 import { HowToPlayScreen } from './ui/screens/HowToPlayScreen';
 import { ChallengeScreen } from './ui/screens/ChallengeScreen';
 import { QuestsScreen } from './ui/screens/QuestsScreen';
+import { ResonanceScreen } from './ui/screens/ResonanceScreen';
 import { textures } from './render/TextureStore';
 import { THREATS } from './data/threats';
 import { GUARDIANS } from './data/guardians';
@@ -72,6 +73,7 @@ async function main(): Promise<void> {
   app.screens.register(new HowToPlayScreen(app));
   app.screens.register(new ChallengeScreen(app));
   app.screens.register(new QuestsScreen(app));
+  app.screens.register(new ResonanceScreen(app));
 
   // Hardware/browser back and Escape both mean "up one level".
   window.addEventListener('keydown', (e) => {

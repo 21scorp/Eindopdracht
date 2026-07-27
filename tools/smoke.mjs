@@ -108,6 +108,40 @@ try {
   const resumed = await page.evaluate(() => window.aegis.session.elapsed);
   if (resumed <= pausedAt) throw new Error('the run did not resume');
 
+  // --- the Resonance draft --------------------------------------------------
+  // Driven from the wave-clear event rather than by playing to wave 2, so the
+  // check is about the draft and not about how well the autopilot happens to
+  // play. It must freeze the run, offer three distinct cards, apply the one
+  // taken, and hand control straight back.
+  log('drafting a resonance');
+  await page.evaluate(() => window.aegis.session.events.emit('waveClear', { wave: 2, bonus: 0 }));
+  await page.waitForTimeout(500);
+  const draft = await page.evaluate(() => ({
+    screen: window.aegis.screens.currentName,
+    paused: window.aegis.paused,
+    offer: window.aegis.session.offer,
+    cards: document.querySelectorAll('.rescard').length,
+    arc: window.aegis.session.stats.arc,
+  }));
+  console.log('  draft:', JSON.stringify(draft));
+  if (draft.screen !== 'resonance') throw new Error('the draft did not open on a draft wave');
+  if (!draft.paused) throw new Error('the draft did not freeze the run');
+  if (draft.cards !== 3) throw new Error(`the draft rendered ${draft.cards} cards, expected 3`);
+  if (new Set(draft.offer).size !== 3) throw new Error('the draft offered a duplicate card');
+  await shot('02c-resonance');
+
+  await page.evaluate(() => document.querySelector('.rescard')?.click());
+  await page.waitForTimeout(400);
+  const drafted = await page.evaluate(() => ({
+    paused: window.aegis.paused,
+    taken: window.aegis.session.resonance,
+    mode: window.aegis.mode,
+  }));
+  console.log('  drafted:', JSON.stringify(drafted));
+  if (drafted.paused) throw new Error('taking a card left the run frozen');
+  if (drafted.taken.length !== 1) throw new Error('taking a card did not record it');
+  if (drafted.taken[0] !== draft.offer[0]) throw new Error('the card taken was not the card tapped');
+
   // Play for real: an "autopilot" that aims at the nearest incoming threat and
   // pulses when a cluster is at the shield radius. It is not a good player, but
   // it exercises every collision path.
@@ -188,6 +222,10 @@ try {
       await page.evaluate(() => {
         window.aegis.session.integrity = 1;
         window.aegis.session.invuln = 5;
+        // A real draft can land inside this window; take a card and carry on.
+        if (window.aegis.screens.currentName === 'resonance') {
+          document.querySelector('.rescard')?.click();
+        }
       });
       await page.waitForTimeout(450);
     }
@@ -226,6 +264,15 @@ try {
     );
     if (!offered) throw new Error('the results screen never offered the clip');
     await shot('04b-results-clip');
+  }
+
+  const buildShown = await page.evaluate(() => ({
+    taken: window.aegis.lastRun?.stats?.resonance?.length ?? 0,
+    chips: document.querySelectorAll('.results__build:not([hidden]) .resheld').length,
+  }));
+  console.log('  build on results:', JSON.stringify(buildShown));
+  if (buildShown.taken > 0 && buildShown.chips !== buildShown.taken) {
+    throw new Error(`results showed ${buildShown.chips} resonance chips for ${buildShown.taken} cards`);
   }
 
   // --- summon ---------------------------------------------------------------

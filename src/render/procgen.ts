@@ -885,12 +885,136 @@ export function registerProceduralArt(store: TextureStore, guardians: readonly G
     'ui/prism': () => uiPrism(96),
     'ui/core': () => uiCore(96),
     'ui/shard': () => uiShard(96),
+
+    // Resonance draft sigils.
+    'res/arc': () => resonanceSigil('arc', COLORS.aegis),
+    'res/turn': () => resonanceSigil('turn', COLORS.aegis),
+    'res/pulse': () => resonanceSigil('pulse', COLORS.shard),
+    'res/perfect': () => resonanceSigil('perfect', COLORS.parry),
+    'res/chain': () => resonanceSigil('chain', COLORS.overdrive),
+    'res/nexus': () => resonanceSigil('nexus', COLORS.heal),
+    'res/score': () => resonanceSigil('score', COLORS.nexus),
+    'res/ult': () => resonanceSigil('ult', COLORS.ultimate),
   });
 
   for (const g of guardians) {
     store.define(`guardian/${g.id}/portrait`, () => guardianPortrait(g.rarity, g.shape, g.hue));
     store.define(`guardian/${g.id}/emblem`, () => guardianEmblem(g.shape, g.hue, g.rarity));
   }
+}
+
+/**
+ * Resonance sigils.
+ *
+ * Eight glyphs on one plate, so a draft card reads at a glance without anyone
+ * having to learn an icon language: an arc for anything that changes the
+ * shield, a ring for the pulse, a diamond for precision, a bolt for chains, a
+ * hexagon for the nexus, a wedge for score, a chevron for the Ultimate.
+ */
+type SigilKind = 'arc' | 'turn' | 'pulse' | 'perfect' | 'chain' | 'nexus' | 'score' | 'ult';
+
+function resonanceSigil(kind: SigilKind, color: string, size = 96): HTMLCanvasElement {
+  const { c, ctx } = canvas(size);
+  const r = size / 2;
+  ctx.translate(r, r);
+  radialGlow(ctx, 0, 0, r * 0.95, color, 0.34, 2.4);
+
+  // A dark plate under every glyph keeps contrast identical across the set.
+  polygonPath(ctx, 0, 0, r * 0.82, 6, Math.PI / 6);
+  ctx.fillStyle = alpha('#0A0F1E', 0.88);
+  ctx.fill();
+  ctx.strokeStyle = alpha(color, 0.5);
+  ctx.lineWidth = size * 0.022;
+  ctx.stroke();
+
+  ctx.strokeStyle = lighten(color, 0.35);
+  ctx.fillStyle = lighten(color, 0.35);
+  ctx.lineWidth = size * 0.075;
+
+  const u = r * 0.44;
+  switch (kind) {
+    case 'arc':
+      ctx.beginPath();
+      ctx.arc(0, 0, u * 1.15, Math.PI * 0.78, Math.PI * 2.22);
+      ctx.stroke();
+      break;
+    case 'turn':
+      ctx.beginPath();
+      ctx.arc(0, 0, u, Math.PI * 0.6, Math.PI * 1.9);
+      ctx.stroke();
+      // Arrowhead on the leading end, so it reads as rotation not as an arc.
+      ctx.beginPath();
+      ctx.moveTo(u * 0.18, -u * 1.16);
+      ctx.lineTo(u * 0.86, -u * 0.72);
+      ctx.lineTo(u * 0.02, -u * 0.42);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'pulse':
+      ctx.lineWidth = size * 0.055;
+      for (const k of [0.55, 0.95, 1.35]) {
+        ctx.globalAlpha = k === 1.35 ? 0.45 : k === 0.95 ? 0.75 : 1;
+        ctx.beginPath();
+        ctx.arc(0, 0, u * k, 0, TAU);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      break;
+    case 'perfect':
+      ctx.beginPath();
+      ctx.moveTo(0, -u * 1.2);
+      ctx.lineTo(u * 0.82, 0);
+      ctx.lineTo(0, u * 1.2);
+      ctx.lineTo(-u * 0.82, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.arc(0, 0, u * 1.5, 0, TAU);
+      ctx.lineWidth = size * 0.03;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      break;
+    case 'chain':
+      ctx.beginPath();
+      ctx.moveTo(-u * 0.5, -u * 1.25);
+      ctx.lineTo(u * 0.34, -u * 0.2);
+      ctx.lineTo(-u * 0.12, -u * 0.06);
+      ctx.lineTo(u * 0.58, u * 1.25);
+      ctx.lineTo(-u * 0.44, u * 0.14);
+      ctx.lineTo(u * 0.04, 0);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    case 'nexus':
+      polygonPath(ctx, 0, 0, u * 1.15, 6, 0);
+      ctx.lineWidth = size * 0.06;
+      ctx.stroke();
+      polygonPath(ctx, 0, 0, u * 0.55, 6, 0);
+      ctx.fill();
+      break;
+    case 'score':
+      ctx.beginPath();
+      ctx.moveTo(-u * 1.15, u * 0.95);
+      ctx.lineTo(-u * 0.25, -u * 0.1);
+      ctx.lineTo(u * 0.3, u * 0.35);
+      ctx.lineTo(u * 1.2, -u * 1.05);
+      ctx.lineWidth = size * 0.08;
+      ctx.stroke();
+      break;
+    case 'ult':
+      for (const dy of [-u * 0.62, u * 0.34]) {
+        ctx.beginPath();
+        ctx.moveTo(-u * 0.95, dy + u * 0.42);
+        ctx.lineTo(0, dy - u * 0.42);
+        ctx.lineTo(u * 0.95, dy + u * 0.42);
+        ctx.lineWidth = size * 0.075;
+        ctx.stroke();
+      }
+      break;
+  }
+
+  return c;
 }
 
 /** Exposed for tests and for tooling that bakes these into a real atlas. */

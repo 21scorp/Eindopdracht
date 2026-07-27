@@ -23,6 +23,15 @@
 
 import { EventBus } from '../core/EventBus';
 import { Rng } from '../core/Rng';
+import {
+  applyResonance,
+  draftIndex,
+  getResonance,
+  isDraftWave,
+  makeMods,
+  rollResonance,
+  type RunMods,
+} from '../data/resonance';
 import { TAU, angleDistance, clamp, clamp01, dampAngle, normalizeAngle } from '../core/math';
 import { DIFFICULTY, FEEL, PULSE, SCORING, SHIELD } from '../data/balance';
 import { THREATS, type ThreatDef } from '../data/threats';
@@ -80,7 +89,18 @@ export class GameSession {
 
   // --- guardian ---
   guardian!: Guardian;
+  /** The Guardian's own scaled stats, before anything the run added. */
+  baseStats: GuardianStats = { ...BASE_STATS };
+  /** What the simulation actually reads: base stats with run modifiers folded in. */
   stats: GuardianStats = { ...BASE_STATS };
+
+  // --- resonance (the in-run draft) ---
+  /** Ids taken this run, in the order they were taken. */
+  resonance: string[] = [];
+  mods: RunMods = makeMods();
+  /** The three ids currently on offer, or empty when no draft is pending. */
+  offer: string[] = [];
+  private secondWindUsed = false;
 
   // --- shield ---
   shieldAngle = -Math.PI / 2;
@@ -163,7 +183,12 @@ export class GameSession {
     this.seed = seed;
     this.rng = new Rng(`session-${seed}`);
     this.guardian = guardian;
-    this.stats = scaleStats(guardian.stats, level, stars);
+    this.baseStats = scaleStats(guardian.stats, level, stars);
+    this.resonance = [];
+    this.offer = [];
+    this.mods = makeMods();
+    this.secondWindUsed = false;
+    this.applyMods();
 
     this.phase = 'playing';
     this.shieldAngle = -Math.PI / 2;
@@ -237,6 +262,8 @@ export class GameSession {
       accuracy: contacts === 0 ? 0 : (this.counters.perfects + this.counters.parries) / contacts,
       guardianId: this.guardian?.id ?? 'vane',
       seed: this.seed,
+      resonance: [...this.resonance],
+      coreMult: this.mods.cores,
     };
   }
 
@@ -281,6 +308,80 @@ export class GameSession {
     const id = this.guardian.ultimate;
     this.events.emit('ultimateFired', { id });
     this.applyUltimate(id);
+    return true;
+  }
+
+  // ------------------------------------------------------------- resonance
+
+  /**
+   * Recompute the stats the simulation reads.
+   *
+   * Every card the run has taken is folded in from scratch rather than applied
+   * incrementally, so the stat block is always a pure function of the Guardian
+   * and the list of cards. That matters more than it looks: it means a card can
+   * never be applied twice by a stray call, and a run's whole state is
+   * reproducible from `resonance` alone.
+   */
+  private applyMods(): void {
+    const b = this.baseStats;
+    const m = this.mods;
+    this.stats = {
+      arc: clamp(b.arc * m.arc, 0.25, Math.PI * 1.4),
+      turn: Math.max(0.012, b.turn * m.turn),
+      pulseCooldown: Math.max(0.35, b.pulseCooldown * m.pulseCooldown),
+      pulseWindow: b.pulseWindow * m.pulseWindow,
+      parryWindow: b.parryWindow * m.parryWindow,
+      deflectSpeed: b.deflectSpeed * m.deflectSpeed,
+      integrity: b.integrity + m.integrityBonus,
+      ultCost: Math.max(4, Math.round(b.ultCost * m.ultCost)),
+      scoreMult: b.scoreMult * m.scoreMult,
+    };
+    this.ultCost = this.stats.ultCost;
+    this.arcHalf = this.fullCircle ? Math.PI : this.stats.arc / 2;
+    if (this.mods.mirror) this.mirror = true;
+  }
+
+  /** Is a draft owed after clearing this wave? */
+  draftDue(wave: number): boolean {
+    return isDraftWave(wave) && this.phase === 'playing';
+  }
+
+  /**
+   * Roll the cards for the draft owed at this wave.
+   *
+   * Seeded from the run seed and the draft number, so a challenge link offers
+   * the same cards at the same points — as long as the challenger takes the
+   * same ones. Diverging picks diverge the pool, which is the honest behaviour:
+   * the alternative is offering a card the player already holds.
+   */
+  rollOffer(wave: number): string[] {
+    const index = Math.max(0, draftIndex(wave));
+    const rng = new Rng(`resonance-${this.seed}-${index}-${this.resonance.join('.')}`);
+    this.offer = rollResonance(rng, this.resonance, index);
+    return this.offer;
+  }
+
+  /** Take a card. Returns false for an unknown id or one already held. */
+  takeResonance(id: string): boolean {
+    const def = getResonance(id);
+    if (!def || this.resonance.includes(id)) return false;
+
+    const beforeIntegrity = this.mods.integrityBonus;
+    this.resonance.push(id);
+    this.mods = applyResonance(this.resonance);
+    this.applyMods();
+
+    // Integrity is the one stat that has a *current* value as well as a maximum,
+    // so raising the maximum has to hand over the repair too — a card that says
+    // "repair the nexus" and does not is the kind of thing players screenshot.
+    const gained = this.mods.integrityBonus - beforeIntegrity;
+    if (gained > 0) {
+      this.maxIntegrity = this.stats.integrity;
+      this.integrity = Math.min(this.maxIntegrity, this.integrity + gained);
+    }
+
+    this.offer = [];
+    this.events.emit('resonanceTaken', { id, name: def.name, tier: def.tier });
     return true;
   }
 
@@ -609,7 +710,7 @@ export class GameSession {
       const dx = other.x - t.x;
       const dy = other.y - t.y;
       const dist = Math.hypot(dx, dy);
-      if (dist < 1 || dist > this.arena.unit * 0.55) continue;
+      if (dist < 1 || dist > this.arena.unit * 0.55 * this.mods.homing) continue;
       // Only consider targets roughly ahead, so shots never turn back inward.
       const forward = (dx * dirX + dy * dirY) / dist;
       if (forward < 0.35) continue;
@@ -622,7 +723,7 @@ export class GameSession {
     }
     if (bestScore === Infinity) return;
 
-    const turn = Math.min(1, 5.5 * dt);
+    const turn = Math.min(1, 5.5 * this.mods.homing * dt);
     const nx = dirX + (bestX - dirX) * turn;
     const ny = dirY + (bestY - dirY) * turn;
     const len = Math.hypot(nx, ny) || 1;
@@ -679,7 +780,8 @@ export class GameSession {
   private handleShieldContact(t: Threat, perfect: boolean): void {
     if (this.ult.id === 'overcharge' && this.ult.timer > 0) perfect = true;
     const quality = perfect ? 'perfect' : 'block';
-    this.resolveContact(t, quality, t.angle, perfect ? DAMAGE.perfect : DAMAGE.block);
+    const damage = perfect ? DAMAGE.perfect * this.mods.perfectDamage : DAMAGE.block;
+    this.resolveContact(t, quality, t.angle, damage);
   }
 
   private handlePulseCatch(t: Threat): void {
@@ -715,7 +817,8 @@ export class GameSession {
     t.vy = Math.sin(spreadAngle) * speed;
     t.spin = this.rng.signedRange(9);
     t.flash = 1;
-    t.hp = quality === 'parry' ? 2 : 1; // parried shots pierce one extra target
+    // Parried shots pierce one extra target; CHAIN REACTION adds another.
+    t.hp = (quality === 'parry' ? 2 : 1) + this.mods.chainDepth;
     this.counters.kills++;
     this.events.emit('threatKilled', { threat: t, x: t.x, y: t.y, byUltimate: false });
 
@@ -740,15 +843,16 @@ export class GameSession {
             : SCORING.chain;
 
     const comboGain =
-      quality === 'block'
+      (quality === 'block'
         ? SCORING.comboBlock
         : quality === 'perfect'
           ? SCORING.comboPerfect
           : quality === 'parry'
             ? SCORING.comboParry
-            : SCORING.comboChain;
+            : SCORING.comboChain) + this.mods.comboBonus;
 
-    const gained = base * t.scoreMult * this.multiplier * this.stats.scoreMult;
+    const focus = quality === 'perfect' ? this.mods.perfectScore : 1;
+    const gained = base * t.scoreMult * this.multiplier * this.stats.scoreMult * focus;
     this.score += gained;
     this.combo += comboGain;
     if (this.combo > this.maxCombo) this.maxCombo = this.combo;
@@ -835,8 +939,17 @@ export class GameSession {
     if (this.invuln > 0) return;
 
     const amount = t.def.damage;
-    this.integrity -= amount;
-    this.invuln = 1.1;
+    if (this.integrity - amount <= 0 && this.mods.secondWind && !this.secondWindUsed) {
+      // SECOND WIND. The combo still breaks — this is a reprieve, not a freebie
+      // — but the run continues, with a long enough window to reset the shield.
+      this.secondWindUsed = true;
+      this.integrity = 1;
+      this.invuln = 2.6;
+      this.events.emit('secondWind', {});
+    } else {
+      this.integrity -= amount;
+      this.invuln = 1.1;
+    }
 
     const brokenCombo = this.combo;
     if (this.overdrive) {

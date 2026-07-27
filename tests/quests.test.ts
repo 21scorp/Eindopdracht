@@ -36,6 +36,8 @@ function run(overrides: Partial<RunStats> = {}): RunStats {
     accuracy: 0.6,
     guardianId: 'vane',
     seed: 'test',
+    resonance: [],
+    coreMult: 1,
     ...overrides,
   };
 }

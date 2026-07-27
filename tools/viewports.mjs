@@ -27,7 +27,7 @@ const VIEWPORTS = [
   { name: 'ultrawide', width: 2560, height: 1080, mobile: false },
 ];
 
-const SCREENS = ['home', 'roster', 'banner', 'shop', 'rates', 'howtoplay'];
+const SCREENS = ['home', 'roster', 'banner', 'shop', 'rates', 'howtoplay', 'quests', 'resonance'];
 
 const problems = [];
 const consoleErrors = [];
@@ -61,7 +61,12 @@ for (const vp of VIEWPORTS) {
   for (const screen of SCREENS) {
     await page.evaluate((s) => {
       window.aegis.showMenu('home');
-      if (s !== 'home') window.aegis.screens.push(s);
+      if (s === 'resonance') {
+        // The draft only ever appears with cards on it, so give it cards.
+        window.aegis.screens.push('resonance', { offer: window.aegis.session.rollOffer(2), wave: 2 });
+      } else if (s !== 'home') {
+        window.aegis.screens.push(s);
+      }
     }, screen);
     await page.waitForTimeout(450);
 

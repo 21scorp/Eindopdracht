@@ -31,6 +31,7 @@ import type { RunStats } from '../game/events';
 import { Profile } from '../meta/Profile';
 import { QuestTracker, type QuestView } from '../meta/quests';
 import { ClipRecorder, shouldArm, type ClipResult } from '../meta/ClipRecorder';
+import { RESONANCE_BY_ID } from '../data/resonance';
 import { clearChallengeFromUrl, evaluateChallenge, readChallengeFromUrl, type Challenge } from '../meta/challenge';
 import { ScreenStack } from '../ui/Screen';
 import { audio } from '../audio/AudioEngine';
@@ -138,6 +139,7 @@ export class App {
     });
 
     this.session.events.on('runEnd', ({ stats }) => this.handleRunEnd(stats));
+    this.session.events.on('waveClear', ({ wave }) => this.offerResonance(wave));
 
     this.loop = new Loop({
       update: (dt) => this.update(dt),
@@ -441,9 +443,43 @@ export class App {
     }
   }
 
+  /**
+   * Open the draft, if this wave owes one.
+   *
+   * Deliberately on `waveClear` rather than on the next wave starting: the
+   * director's calm beat is already a pause in the action, so the draft lands
+   * in a gap instead of interrupting one.
+   */
+  private offerResonance(wave: number): void {
+    if (this.mode !== 'playing' || this.paused) return;
+    if (!this.session.draftDue(wave)) return;
+    const offer = this.session.rollOffer(wave);
+    if (offer.length === 0) return;
+
+    this.paused = true;
+    this.clips.pauseRecording();
+    this.input.suppressed = true;
+    this.audio.music.setIntensity(0.35);
+    this.screens.push('resonance', { offer, wave });
+  }
+
+  /** Take a card and drop straight back into the run. */
+  takeResonance(id: string): void {
+    if (!this.session.takeResonance(id)) return;
+    this.audio.uiConfirm();
+    this.screens.closeAll();
+    this.paused = false;
+    this.clips.resumeRecording();
+    this.input.suppressed = false;
+    this.loop.resetClock();
+    const def = RESONANCE_BY_ID.get(id);
+    if (def) this.vfx.showBanner(def.name, def.text, this.gameRenderer.accent, 1.5);
+  }
+
   pause(): void {
     if (this.mode !== 'playing' || this.paused) return;
     this.paused = true;
+    this.clips.pauseRecording();
     this.input.suppressed = true;
     this.screens.push('pause');
   }
@@ -451,6 +487,7 @@ export class App {
   resume(): void {
     if (this.mode !== 'playing') return;
     this.paused = false;
+    this.clips.resumeRecording();
     this.screens.closeAll();
     this.input.suppressed = false;
     // The loop has been accumulating real time behind the menu; without this
@@ -497,7 +534,10 @@ export class App {
     this.profile.rollDailyIfNeeded();
     const earnedToday = this.profile.data.daily.coresEarned;
 
-    const raw = stats.score * REWARDS.coresPerScore + stats.wave * REWARDS.coresPerWave;
+    // CORE TITHE and friends multiply the raw take, before the daily soft cap —
+    // a card that says "30% more Cores" has to mean it on the runs where it
+    // matters, not only on the ones under the cap.
+    const raw = (stats.score * REWARDS.coresPerScore + stats.wave * REWARDS.coresPerWave) * (stats.coreMult ?? 1);
     // Beyond the daily soft cap, earnings continue at a reduced rate rather
     // than stopping. A hard wall punishes the players who play the most.
     const beforeCap = Math.max(0, REWARDS.dailyCoreSoftCap - earnedToday);

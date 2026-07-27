@@ -25,7 +25,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 173 unit tests (gacha, combat, economy, quests, clips, textures, engine) |
+| `npm test` | 208 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
@@ -72,6 +72,28 @@ Combo multiplies everything, up to 12x. At 30 combo you enter **Overdrive** and
 the whole arena turns gold at double score. Taking damage breaks the chain — in
 Overdrive you keep part of it, because losing a 40-combo to one mistake is how
 you make people stop playing.
+
+### The draft
+
+Every third wave the run stops and offers three Resonance cards. Take one, keep
+it until you die, lose it when you do.
+
+This is in the game for a specific reason. A Guardian you pulled last week plays
+the same way every run, and "the same way every run" is what makes people stop
+after five. A draft means the *build* is different even when the Guardian is
+not — and a run that went somewhere unexpected is a run worth telling someone
+about.
+
+Seventeen cards across three tiers, weighted so the first draft is almost always
+three commons and the fifth is regularly showing epics: a wave-2 player has not
+earned a run-defining card and would not know what to do with one. Every card is
+large enough to feel inside ten seconds — WIDE GUARD is +18% arc, not +4% — and
+at least one costs you something: FOCUS scores 70% more on perfects and narrows
+your shield to do it.
+
+The whole thing is a pure fold. A run's modifiers are recomputed from the list
+of cards taken, never applied incrementally, so a card can never land twice and
+the run's entire state is reproducible from that list.
 
 ### Coming back
 
@@ -204,9 +226,14 @@ Current shape:
 
 | Skill | Median wave | Median run | Met a Warden |
 | --- | --- | --- | --- |
-| novice | 9 | 57s | 98% |
-| average | 13 | 82s | 100% |
-| expert | 17 | 108s | 100% |
+| novice | 8 | 60s | 100% |
+| average | 15 | 115s | 100% |
+| expert | 20 | 149s | 100% |
+
+An average run earns ~630 Cores, which is a summon every three runs and a
+ten-pull every thirty. The core and XP rates were halved when the draft landed:
+it roughly doubled the score an average run puts up — that is the point of it —
+and leaving them alone would have quietly halved the price of everything.
 
 The harness has already earned its place. Its first report showed a median run
 length equal to the harness cap — runs were not ending at all — which turned out
@@ -230,19 +257,23 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **173 unit tests** across gacha guarantees, combat mechanics, the wallet and
-  save migration, daily objectives, clip capture decisions, the texture
-  contract, and the engine primitives. The gacha suite asserts every published
-  guarantee, including the 50/50 and its make-good; the quest suite asserts a
-  reward can never pay twice.
+- **208 unit tests** across gacha guarantees, combat mechanics, the Resonance
+  draft, the wallet and save migration, daily objectives, clip capture
+  decisions, the texture contract, and the engine primitives. The gacha suite
+  asserts every published guarantee, including the 50/50 and its make-good; the
+  quest suite asserts a reward can never pay twice; the draft suite asserts
+  every card changes something and none of them can be applied twice.
 - **`npm run balance`** for systemic behaviour over hundreds of runs.
 - **`npm run smoke`** drives a real Chromium at phone size: claims the daily
-  reward, plays a run with an autopilot, records a highlight clip and checks the
-  encoder actually produced a file, performs a ten-pull, opens every screen,
+  reward, plays a run with an autopilot, checks the pause menu actually freezes
+  the world, drafts a Resonance, records a highlight clip and checks the encoder
+  actually produced a file, performs a ten-pull, opens every screen,
   renders the share card, follows a challenge link and checks the run uses the
   challenger's seed. Fails on any console error.
 - **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
   monitor and fails on content wider than the viewport.
+- **`npm run balance`** drafts as it plays, so its numbers describe the game as
+  it is actually played rather than a version nobody sees.
 
 ---
 
@@ -306,8 +337,8 @@ Any static host works the same way: `npx vite build` and serve `dist/`.
 ## Status
 
 Complete and playable end to end: gameplay, progression, collection, summoning,
-shop, daily loop, objectives, coaching, challenge links, share card, highlight
-clips, audio, settings, save transfer and offline install.
+shop, daily loop, objectives, the in-run draft, coaching, challenge links, share
+card, highlight clips, audio, settings, save transfer and offline install.
 
 Not built yet, and deliberately: a backend, leaderboards, real payments, and the
 sprite art itself.

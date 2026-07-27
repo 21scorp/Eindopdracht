@@ -72,6 +72,16 @@ function playRun(guardianId: string, skill: Skill, seed: string): RunRecord {
   let finished: RunStats | null = null;
   session.events.on('runEnd', ({ stats }) => (finished = stats));
 
+  // The bot drafts too. Without this the harness measures a game nobody plays:
+  // a real run past wave 2 always has cards on it, and the numbers this tool
+  // reports — run length, score curve, core income — all move because of them.
+  // It picks at random rather than well, so the report reads as a floor.
+  session.events.on('waveClear', ({ wave }) => {
+    if (!session.draftDue(wave)) return;
+    const offer = session.rollOffer(wave);
+    if (offer.length > 0) session.takeResonance(rng.pick(offer));
+  });
+
   while (!finished && elapsed < MAX_RUN_SECONDS) {
     decisionTimer -= STEP;
     if (decisionTimer <= 0) {

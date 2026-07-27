@@ -140,8 +140,14 @@ export const DIFFICULTY = {
  * rewards and account levels are counted.
  */
 export const REWARDS = {
-  /** Cores earned per point of score. */
-  coresPerScore: 0.0016,
+  /**
+   * Cores earned per point of score.
+   *
+   * Halved when the Resonance draft landed. The draft roughly doubled the score
+   * an average run puts up — that is the point of it — and leaving this alone
+   * would have quietly halved the price of every summon.
+   */
+  coresPerScore: 0.0008,
   /** Flat cores for finishing a wave. */
   coresPerWave: 12,
   /** Bonus cores for a new personal best. */
@@ -156,8 +162,8 @@ export const REWARDS = {
 } as const;
 
 export const XP = {
-  /** Account XP per point of score. */
-  perScore: 0.004,
+  /** Account XP per point of score. Halved alongside the core rate. */
+  perScore: 0.002,
   perWave: 25,
   /** XP required to reach level n from n-1. */
   curve: (level: number): number => Math.round(120 + Math.pow(level, 1.6) * 45),

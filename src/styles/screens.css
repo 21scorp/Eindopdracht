@@ -2292,3 +2292,196 @@
   font-size: 14px;
   color: var(--heal);
 }
+
+/* ======================================================================== */
+/* Resonance draft                                                          */
+/* ======================================================================== */
+
+/*
+ * Sits over the frozen arena rather than replacing it, so the run never leaves
+ * the screen. Three cards, thumb-reachable, no skip.
+ */
+.resonance {
+  justify-content: flex-end;
+  gap: 14px;
+  padding-bottom: calc(18px + var(--safe-bottom, 0px));
+  /* Overrides the generic overlay scrim: the arena is *frozen*, not replaced,
+     and a player should still see the wave they just cleared behind the cards.
+     Weight the darkening to the bottom, where the cards are. */
+  background: linear-gradient(180deg, rgba(4, 6, 14, 0.18) 0%, rgba(4, 6, 14, 0.55) 44%, rgba(4, 6, 14, 0.95) 78%);
+  backdrop-filter: blur(6px) saturate(115%);
+  -webkit-backdrop-filter: blur(6px) saturate(115%);
+}
+
+.resonance__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.resonance__eyebrow {
+  color: var(--accent);
+  letter-spacing: 0.28em;
+}
+
+.resonance__title h2 {
+  font-size: clamp(20px, 5.6vw, 26px);
+  letter-spacing: 0.1em;
+}
+
+.resonance__cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* Below ~360px three columns of readable text stop fitting; stack instead. */
+@media (max-width: 359px) {
+  .resonance__cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rescard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px 16px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(23, 31, 54, 0.96), rgba(11, 16, 32, 0.98));
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+  animation: rescard-in 260ms var(--ease-out) both;
+  transition:
+    transform 140ms var(--ease-out),
+    border-color 160ms var(--ease-out),
+    box-shadow 160ms var(--ease-out);
+}
+
+@keyframes rescard-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rescard:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .rescard:hover {
+    transform: translateY(-3px);
+  }
+}
+
+.rescard__tier {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--text-faint);
+}
+
+.rescard__icon {
+  width: 52px;
+  height: 52px;
+}
+
+.rescard__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  line-height: 1.15;
+}
+
+.rescard__text {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-dim);
+  text-wrap: balance;
+}
+
+/* Tier is carried by the frame, not by a badge — one glance, no reading. */
+.rescard--rare {
+  border-color: color-mix(in srgb, var(--epic) 55%, transparent);
+  box-shadow: 0 14px 40px -26px color-mix(in srgb, var(--epic) 90%, transparent);
+}
+
+.rescard--rare .rescard__tier {
+  color: var(--epic);
+}
+
+.rescard--epic {
+  border-color: color-mix(in srgb, var(--legendary) 62%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--legendary) 22%, transparent),
+    0 18px 46px -22px color-mix(in srgb, var(--legendary) 95%, transparent);
+}
+
+.rescard--epic .rescard__tier {
+  color: var(--legendary);
+}
+
+.resonance__held {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.resonance__heldrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+}
+
+.resheld {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px 3px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--line-soft);
+  background: rgba(13, 18, 34, 0.86);
+  font-size: 10px;
+  font-family: var(--font-display);
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.resheld--rare {
+  border-color: color-mix(in srgb, var(--epic) 45%, transparent);
+  color: var(--text);
+}
+
+.resheld--epic {
+  border-color: color-mix(in srgb, var(--legendary) 50%, transparent);
+  color: var(--text);
+}
+
+.results__build {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.results__build[hidden] {
+  display: none;
+}
+
+.results__buildrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}

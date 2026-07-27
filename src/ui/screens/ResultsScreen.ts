@@ -16,6 +16,7 @@ import type { App, ChallengeResult, RunRewards } from '../../app/App';
 import type { QuestView } from '../../meta/quests';
 import type { RunStats } from '../../game/events';
 import { clipFileName, type ClipResult } from '../../meta/ClipRecorder';
+import { getResonance } from '../../data/resonance';
 import { Screen } from '../Screen';
 import { statRow, textureImg } from '../components';
 import { button, clear, fmt, fmtTime, h } from '../dom';
@@ -34,6 +35,7 @@ export class ResultsScreen extends Screen {
   private challenge: ChallengeResult | null = null;
   private questsCompleted: QuestView[] = [];
   private clipBox!: HTMLElement;
+  private buildBox!: HTMLElement;
   private clipUrl: string | null = null;
   /** Bumped on every entry so a slow encode cannot land on a later run. */
   private visit = 0;
@@ -49,6 +51,7 @@ export class ResultsScreen extends Screen {
     this.grid = h('div', { class: 'results__grid' });
     this.rewardsEl = h('div', { class: 'results__rewards panel' });
     this.clipBox = h('div', { class: 'results__clip', hidden: true });
+    this.buildBox = h('div', { class: 'results__build', hidden: true });
 
     this.shareBtn = button('SHARE', () => void this.share(), { variant: 'ghost', class: 'results__share' });
 
@@ -60,7 +63,7 @@ export class ResultsScreen extends Screen {
         this.scoreEl,
         h('div', { class: 'results__scorelabel t-label', text: 'Final score' }),
       ),
-      h('div', { class: 'results__mid grow scroll' }, this.portrait, this.clipBox, this.grid, this.rewardsEl),
+      h('div', { class: 'results__mid grow scroll' }, this.portrait, this.clipBox, this.grid, this.buildBox, this.rewardsEl),
       h(
         'div',
         { class: 'results__actions' },
@@ -263,6 +266,31 @@ export class ResultsScreen extends Screen {
       statRow('Threats down', String(stats.kills)),
       statRow('Wardens', String(stats.bossKills)),
     );
+
+    // The build. Two people with the same score got there differently, and this
+    // row is the part someone screenshots and argues about.
+    clear(this.buildBox);
+    const taken = stats.resonance ?? [];
+    if (taken.length > 0) {
+      this.buildBox.append(h('span', { class: 't-label', text: 'Resonance' }));
+      const row = h('div', { class: 'results__buildrow' });
+      for (const id of taken) {
+        const def = getResonance(id);
+        if (!def) continue;
+        row.append(
+          h(
+            'span',
+            { class: `resheld resheld--${def.tier}`, title: def.text },
+            textureImg(def.icon, 20),
+            h('span', { text: def.name }),
+          ),
+        );
+      }
+      this.buildBox.appendChild(row);
+      this.buildBox.removeAttribute('hidden');
+    } else {
+      this.buildBox.setAttribute('hidden', 'true');
+    }
 
     clear(this.rewardsEl);
     this.rewardsEl.append(h('span', { class: 't-label', text: 'Earned' }));

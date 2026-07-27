@@ -40,6 +40,10 @@ export interface RunStats {
   accuracy: number;
   guardianId: string;
   seed: string;
+  /** Resonance cards taken this run, in order. */
+  resonance: string[];
+  /** Multiplier the run's cards put on its core payout. */
+  coreMult: number;
 }
 
 export type GameEvents = {
@@ -62,4 +66,6 @@ export type GameEvents = {
   runStart: { guardianId: string; seed: string };
   runEnd: { stats: RunStats };
   lastStand: Record<string, never>;
+  secondWind: Record<string, never>;
+  resonanceTaken: { id: string; name: string; tier: string };
 };

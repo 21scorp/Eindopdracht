@@ -149,6 +149,7 @@ export class ClipRecorder {
   private previous: ClipSegment | null = null;
   private segmentStart = 0;
   private lastFrameAt = 0;
+  private pausedAt = 0;
   private cycling = false;
   private finishing: ((seg: ClipSegment | null) => void) | null = null;
 
@@ -173,7 +174,41 @@ export class ClipRecorder {
   }
 
   get seconds(): number {
-    return this.rec ? (performance.now() - this.segmentStart) / 1000 : 0;
+    if (!this.rec) return 0;
+    const now = this.pausedAt || performance.now();
+    return (now - this.segmentStart) / 1000;
+  }
+
+  /**
+   * Hold the encoder while the game is frozen.
+   *
+   * Without this a player who spends twenty seconds on a draft gets a clip with
+   * twenty seconds of still frame in the middle of it: MediaRecorder stamps
+   * wall-clock time, so a gap in submitted frames becomes a freeze in the file.
+   * The elapsed clock is rewound by the paused interval too, so a long pause
+   * cannot trip the segment cycle either.
+   */
+  pauseRecording(): void {
+    if (this.rec?.state !== 'recording') return;
+    try {
+      this.rec.pause();
+      this.pausedAt = performance.now();
+    } catch {
+      // Some builds do not implement pause; a frozen stretch is the fallback.
+    }
+  }
+
+  resumeRecording(): void {
+    if (this.rec?.state !== 'paused') return;
+    try {
+      this.rec.resume();
+    } catch {
+      return;
+    }
+    if (this.pausedAt) {
+      this.segmentStart += performance.now() - this.pausedAt;
+      this.pausedAt = 0;
+    }
   }
 
   /** Give up for the rest of the session — used when recording costs frames. */
@@ -343,8 +378,9 @@ export class ClipRecorder {
   }
 
   private onStopped(): void {
-    const seg: ClipSegment = { parts: this.chunks, seconds: (performance.now() - this.segmentStart) / 1000 };
+    const seg: ClipSegment = { parts: this.chunks, seconds: this.seconds };
     this.chunks = [];
+    this.pausedAt = 0;
     this.rec = null;
 
     if (this.finishing) {
@@ -384,7 +420,7 @@ export class ClipRecorder {
       // waiting on a button that will never arrive.
       const timer = setTimeout(() => {
         this.finishing = null;
-        resolve({ parts: this.chunks, seconds: (performance.now() - this.segmentStart) / 1000 });
+        resolve({ parts: this.chunks, seconds: this.seconds });
       }, 2500);
       this.finishing = (seg) => {
         clearTimeout(timer);
