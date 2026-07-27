@@ -25,7 +25,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 218 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
+| `npm test` | 269 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
@@ -289,12 +289,20 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **218 unit tests** across gacha guarantees, combat mechanics, the Resonance
+- **269 unit tests** across gacha guarantees, combat mechanics, the Resonance
   draft, the wallet and save migration, daily objectives, clip capture
   decisions, the texture contract, and the engine primitives. The gacha suite
   asserts every published guarantee, including the 50/50 and its make-good; the
   quest suite asserts a reward can never pay twice; the draft suite asserts
   every card changes something and none of them can be applied twice.
+- **Nothing declared may be decorative.** `tests/live-stats.test.ts` builds two
+  sessions that differ in exactly one value — a Guardian stat, a draft modifier,
+  an Ultimate, a threat property — drives an identical scenario, and asserts
+  something a player could see comes out different. A stat with no probe fails
+  the suite, so the next one added has to be wired up before it can ship. This
+  file exists because `parryWindow` was printed on every Guardian card, scaled
+  by level and stars, multiplied by a Resonance card, and read by no code at
+  all.
 - **`npm run balance`** for systemic behaviour over hundreds of runs.
 - **`npm run smoke`** drives a real Chromium at phone size: claims the daily
   reward, plays a run with an autopilot, checks the pause menu actually freezes

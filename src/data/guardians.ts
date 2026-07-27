@@ -16,17 +16,25 @@ import type { Rarity } from '../render/palette';
 import type { SigilShape } from '../render/procgen';
 import { SHIELD } from './balance';
 
-export type UltimateId =
-  | 'nova'
-  | 'bulwark'
-  | 'dilate'
-  | 'magnetize'
-  | 'lance'
-  | 'mirror'
-  | 'overcharge'
-  | 'siphon'
-  | 'fracture'
-  | 'sentinel';
+/**
+ * Every Ultimate in the game, as data rather than only as a type, so tests can
+ * assert that each one does something and the roster can be checked for one
+ * nobody carries.
+ */
+export const ULTIMATE_IDS = [
+  'nova',
+  'bulwark',
+  'dilate',
+  'magnetize',
+  'lance',
+  'mirror',
+  'overcharge',
+  'siphon',
+  'fracture',
+  'sentinel',
+] as const;
+
+export type UltimateId = (typeof ULTIMATE_IDS)[number];
 
 export interface GuardianStats {
   /** Shield arc width in radians. Wider is more forgiving, narrower scores more. */
