@@ -96,8 +96,8 @@ after five. A draft means the *build* is different even when the Guardian is
 not — and a run that went somewhere unexpected is a run worth telling someone
 about.
 
-Seventeen cards across three tiers, weighted so the first draft is almost always
-three commons and the fifth is regularly showing epics: a wave-2 player has not
+Twenty-four cards across three tiers, weighted so the first draft is almost
+always three commons and the fifth is regularly showing epics: a wave-2 player has not
 earned a run-defining card and would not know what to do with one. Every card is
 large enough to feel inside ten seconds — WIDE GUARD is +18% arc, not +4% — and
 at least one costs you something: FOCUS scores 70% more on perfects and narrows
@@ -254,8 +254,8 @@ Current shape:
 
 | Skill | Median wave | Median run | Met a Warden |
 | --- | --- | --- | --- |
-| novice | 10 | 68s | 95% |
-| average | 15 | 110s | 100% |
+| novice | 10 | 70s | 96% |
+| average | 17 | 121s | 100% |
 | expert | 23 | 172s | 100% |
 
 An average run earns ~665 Cores, which is a summon every three runs and a
@@ -269,11 +269,11 @@ rarity underneath it:
 
 | Rarity | Median score |
 | --- | --- |
-| common | 559k |
-| rare | 704k |
-| epic | 896k |
-| legendary | 2.34M |
-| mythic | 2.39M |
+| common | 515k |
+| rare | 635k |
+| epic | 957k |
+| legendary | 2.47M |
+| mythic | 2.59M |
 
 The curve has to be monotonic. A raw best-to-worst ratio is the wrong alarm on
 its own — rarity is *supposed* to matter, so a healthy roster spreads wide — but

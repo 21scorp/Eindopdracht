@@ -190,6 +190,30 @@ export const RESONANCE: ResonanceDef[] = [
       m.scoreMult *= 1.12;
     },
   },
+  {
+    id: 'slipstream',
+    name: 'SLIPSTREAM',
+    text: 'The shield tracks 15% faster and returns shots 15% harder.',
+    tier: 'common',
+    icon: 'res/turn',
+    weight: 85,
+    apply: (m) => {
+      m.turn *= 0.85;
+      m.deflectSpeed *= 1.15;
+    },
+  },
+  {
+    id: 'hair-trigger',
+    name: 'HAIR TRIGGER',
+    text: 'Pulse recharges 15% sooner and stays lethal 15% longer.',
+    tier: 'common',
+    icon: 'res/pulse',
+    weight: 85,
+    apply: (m) => {
+      m.pulseCooldown *= 0.85;
+      m.pulseWindow *= 1.15;
+    },
+  },
 
   // --- rare: shapes the run -------------------------------------------------
   {
@@ -260,6 +284,43 @@ export const RESONANCE: ResonanceDef[] = [
     },
   },
 
+  {
+    id: 'ricochet',
+    name: 'RICOCHET',
+    text: 'Deflected shots fly 25% faster and punch through one more threat.',
+    tier: 'rare',
+    icon: 'res/chain',
+    weight: 80,
+    apply: (m) => {
+      m.deflectSpeed *= 1.25;
+      m.chainDepth += 1;
+    },
+  },
+  {
+    id: 'tempered-plate',
+    name: 'TEMPERED PLATE',
+    text: 'Repair the nexus and raise its integrity by 1. Everything scores 6% less.',
+    tier: 'rare',
+    icon: 'res/nexus',
+    weight: 75,
+    apply: (m) => {
+      m.integrityBonus += 1;
+      m.scoreMult *= 0.94;
+    },
+  },
+  {
+    id: 'conduit',
+    name: 'CONDUIT',
+    text: 'Your Ultimate charges on 18% less combo and everything scores 6% more.',
+    tier: 'rare',
+    icon: 'res/ult',
+    weight: 80,
+    apply: (m) => {
+      m.ultCost *= 0.82;
+      m.scoreMult *= 1.06;
+    },
+  },
+
   // --- epic: run-defining ---------------------------------------------------
   {
     id: 'twin-guard',
@@ -292,6 +353,32 @@ export const RESONANCE: ResonanceDef[] = [
     weight: 90,
     apply: (m) => {
       m.comboBonus += 1;
+    },
+  },
+  {
+    id: 'hairline',
+    name: 'HAIRLINE',
+    text: 'Perfect parries score 120% more and the perfect window is 50% wider. Your shield is 30% narrower.',
+    tier: 'epic',
+    icon: 'res/perfect',
+    weight: 80,
+    apply: (m) => {
+      m.perfectScore *= 2.2;
+      m.parryWindow *= 1.5;
+      m.arc *= 0.7;
+    },
+  },
+  {
+    id: 'bastion',
+    name: 'BASTION',
+    text: 'Repair the nexus and raise its integrity by 2. Your shield covers 10% more. Everything scores 10% less.',
+    tier: 'epic',
+    icon: 'res/nexus',
+    weight: 75,
+    apply: (m) => {
+      m.integrityBonus += 2;
+      m.arc *= 1.1;
+      m.scoreMult *= 0.9;
     },
   },
 ];

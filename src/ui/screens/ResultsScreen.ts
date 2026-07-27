@@ -378,10 +378,17 @@ export class ResultsScreen extends Screen {
     this.scoreEl.textContent = fmt(this.shownScore);
   }
 
-  /** Retry the same challenge if there was one, otherwise a fresh run. */
+  /**
+   * Play the same thing again.
+   *
+   * "Again" has to mean the run you just played. On a challenge that is the
+   * challenger's seed, and on the Daily it is today's — restarting a Daily into
+   * an ordinary run quietly drops the player out of the thing they came for.
+   */
   private again(): void {
     const c = this.challenge?.challenge;
     if (c) this.app.startChallengeRun(c);
+    else if (this.daily) this.app.startDailyRun();
     else this.app.startRun();
   }
 
