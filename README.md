@@ -9,6 +9,10 @@ you block is wasted — it becomes the shot that kills the next one.
 Runs last one to two minutes. Then you spend what you earned on the thing the
 game is really about: pulling for Guardians.
 
+Every third wave the run stops and offers three upgrades, so no two runs are the
+same shape. Everybody plays the same seed on the same day. And when a run turns
+into something worth seeing, the game records it and hands you the video.
+
 <p align="center">
   <img src="docs/media/arena.png" alt="The arena mid-wave: a shield arc around the nexus, threats converging from every angle" width="270" />
   <img src="docs/media/overdrive.png" alt="Overdrive: the whole arena turns gold at double score" width="270" />
@@ -463,3 +467,11 @@ install.
 
 Not built yet, and deliberately: a backend, leaderboards, real payments, and the
 sprite art itself.
+
+Everything the game claims about itself is checked by something that runs: the
+published gacha rates by the test suite, the balance by a headless harness that
+plays hundreds of runs, the layout at six screen sizes, offline play by cutting
+the network, accessibility on every screen, and the whole thing booting in seven
+deliberately broken browsers. That is the point of the tooling in `tools/` — a
+promise nobody verifies is a promise that quietly stops being true, and several
+of these had already stopped.
