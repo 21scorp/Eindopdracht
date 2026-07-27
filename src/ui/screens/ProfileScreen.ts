@@ -36,6 +36,7 @@ export class ProfileScreen extends Screen {
     const nameInput = h('input', {
       class: 'nameinput',
       type: 'text',
+      aria: { label: 'Your name, shown on share cards and challenge links' },
       maxlength: '14',
       value: p.data.playerName,
       onChange: (e) => {

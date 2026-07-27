@@ -29,7 +29,14 @@
   /* Text */
   --text: #eaf0ff;
   --text-dim: #93a0be;
-  --text-faint: #5c6885;
+  /*
+   * Raised from #5c6885, which measured 3.4:1 against the panels it is used on
+   * — under the 4.5:1 floor for text this small, and this is the colour every
+   * label in the game uses. It now clears 5:1. The hierarchy still reads
+   * because `--text-dim` is lighter again and the labels are also smaller,
+   * lighter-weight and letter-spaced.
+   */
+  --text-faint: #7a87a8;
 
   /* Accents */
   --aegis: #4de1ff;
@@ -319,9 +326,33 @@ body {
   filter: brightness(1.12);
 }
 
-.btn:focus-visible {
+/*
+ * Focus is visible on *everything* that can take it, not only on things that
+ * happen to carry the button class. The hero card, the nav, the chips and the
+ * switches are all real controls, and a keyboard player who cannot see where
+ * they are has no way to play the menus.
+ */
+.btn:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+}
+
+/*
+ * A 50x28 switch is a small target. The pill stays the size it looks, and the
+ * area you can actually hit reaches a comfortable 66x48.
+ */
+.switch {
+  position: relative;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  inset: -10px -8px;
 }
 
 .btn[disabled],

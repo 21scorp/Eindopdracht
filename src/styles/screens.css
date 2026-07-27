@@ -524,7 +524,10 @@
 
 .chipbtn {
   flex: none;
-  padding: 7px 14px;
+  /* 30px tall was under any reasonable thumb target; 38 is comfortable without
+     turning a row of filters into a row of buttons. */
+  min-height: 38px;
+  padding: 9px 14px;
   border-radius: 999px;
   border: 1px solid var(--line-soft);
   background: rgba(255, 255, 255, 0.03);
@@ -535,7 +538,11 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: all 160ms var(--ease-out);
+  transition:
+    color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out),
+    background 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
 }
 
 .chipbtn.is-active {
@@ -685,7 +692,11 @@
   color: var(--text-dim);
   cursor: pointer;
   text-align: left;
-  transition: all 180ms var(--ease-out);
+  transition:
+    color 180ms var(--ease-out),
+    border-color 180ms var(--ease-out),
+    background 180ms var(--ease-out),
+    transform 180ms var(--ease-out);
 }
 
 .banner__tab.is-active {
@@ -1454,7 +1465,9 @@
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 26px;
+  /* The track is 5px and the thumb 20px; the element is what you can actually
+     grab, so it is sized for a thumb rather than for the line it draws. */
+  height: 36px;
   background: transparent;
   cursor: pointer;
 }
@@ -1476,7 +1489,7 @@
   appearance: none;
   width: 20px;
   height: 20px;
-  margin-top: -7.5px;
+  margin-top: -7.5px; /* centres the thumb on the 5px track */
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent);
@@ -1500,7 +1513,11 @@
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
-  transition: all 200ms var(--ease-out);
+  transition:
+    color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out),
+    background 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
 }
 
 .switch.is-on {
@@ -1516,7 +1533,10 @@
   height: 20px;
   border-radius: 50%;
   background: var(--text-dim);
-  transition: all 200ms var(--ease-pop);
+  transition:
+    transform 200ms var(--ease-pop),
+    background 200ms var(--ease-pop),
+    border-color 200ms var(--ease-pop);
 }
 
 .switch.is-on .switch__knob {
@@ -1546,7 +1566,11 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
-  transition: all 160ms var(--ease-out);
+  transition:
+    color 160ms var(--ease-out),
+    border-color 160ms var(--ease-out),
+    background 160ms var(--ease-out),
+    transform 160ms var(--ease-out);
 }
 
 .segmented__btn.is-active {
@@ -1873,7 +1897,12 @@
   color: var(--text-dim);
   cursor: pointer;
   text-align: left;
-  transition: all 200ms var(--ease-out);
+  /* Named properties rather than `all`: `all` animates the focus outline too,
+     so a keyboard player waited 200ms to find out where they were. */
+  transition:
+    color 200ms var(--ease-out),
+    border-color 200ms var(--ease-out),
+    background 200ms var(--ease-out);
 }
 
 .dailybtn.is-ready {

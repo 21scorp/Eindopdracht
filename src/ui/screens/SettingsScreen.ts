@@ -119,6 +119,9 @@ export class SettingsScreen extends Screen {
     const input = h('input', {
       type: 'range',
       class: 'slider',
+      // The visible label is a sibling, not a <label for>, so a screen reader
+      // would otherwise announce this as an unnamed slider.
+      aria: { label },
       min: String(min),
       max: String(max),
       step: String(step),
@@ -143,6 +146,8 @@ export class SettingsScreen extends Screen {
       class: `switch${value ? ' is-on' : ''}`,
       type: 'button',
       role: 'switch',
+      // A 50x28 switch is a small target on its own, so the whole row is the
+      // hit area — the switch is what it looks like, not what you have to hit.
       aria: { checked: value, label },
       onClick: () => {
         const next = !sw.classList.contains('is-on');

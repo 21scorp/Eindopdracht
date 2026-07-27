@@ -40,6 +40,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | `node tools/viewports.mjs` | Every screen at six sizes, failing on any overflow |
 | `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
 | `node tools/soak.mjs 180` | Play for three minutes and watch for leaks |
+| `node tools/a11y.mjs` | Names, targets, contrast and focus on every screen |
 | `node tools/icons.mjs` | Regenerate the app icons |
 
 No backend. No accounts. Save data lives in `localStorage` and can be exported
@@ -310,7 +311,17 @@ chromatic split all live there. It seeds a default rather than overriding a
 choice, so a player who turns the shake back up keeps it.
 
 The whole game is playable with a keyboard: `A`/`D` or arrows to aim, `Space` to
-pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
+pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause. Every control shows where
+focus is — the menus are real DOM rather than canvas precisely so that focus
+order, screen readers and keyboard navigation work.
+
+`node tools/a11y.mjs` walks every screen and fails on a control with no
+accessible name, a target too small to hit with a thumb, text below the contrast
+floor, or an element that takes focus and shows nothing. It has already paid for
+itself: the label colour every screen uses sat at 3.4:1 against its own panel,
+under the 4.5:1 floor for text that size, and several `transition: all` rules
+were animating the focus outline — so a keyboard player waited 200ms to find out
+where they were.
 
 ---
 
