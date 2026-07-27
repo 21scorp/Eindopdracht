@@ -308,6 +308,22 @@ try {
   }));
   console.log('  daily seed:', JSON.stringify(dailySeed));
   if (!dailySeed.active) throw new Error('the daily run did not mark itself active');
+
+  // A challenge that happens to carry today's seed is still a challenge, not a
+  // Daily attempt — the flag has to come from how the run was started.
+  const spoofed = await page.evaluate(() => {
+    window.aegis.startChallengeRun({
+      seed: `aegis-daily-${new Date().toISOString().slice(0, 10)}`,
+      score: 1,
+      wave: 1,
+      name: 'SPOOF',
+      guardianId: 'vane',
+    });
+    return window.aegis.dailyRunActive;
+  });
+  if (spoofed) throw new Error('a challenge link carrying the daily seed counted as a Daily attempt');
+  await page.evaluate(() => window.aegis.startDailyRun());
+  await page.waitForTimeout(1000);
   if (!dailySeed.seed.startsWith('aegis-daily-')) throw new Error(`daily seed was "${dailySeed.seed}"`);
 
   // Score it directly rather than trying to play well: what is under test is

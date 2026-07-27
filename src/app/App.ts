@@ -417,8 +417,11 @@ export class App {
   startDailyRun(): void {
     this.activeChallenge = null;
     this.pendingChallenge = null;
-    this.dailyRunActive = true;
+    // Set *after* the run starts, because `startRun` clears the flag for every
+    // caller. Deriving it from the seed instead would mean a hand-crafted
+    // challenge link carrying today's seed counted as a Daily attempt.
     this.startRun(dailyRunSeed());
+    this.dailyRunActive = true;
   }
 
   /** Replay a challenger's exact wave sequence. */
@@ -434,9 +437,9 @@ export class App {
   }
 
   startRun(seedOverride?: string): void {
-    // Any run that was not started through `startDailyRun` is an ordinary run,
-    // including "again" from the results of a Daily.
-    if (seedOverride !== dailyRunSeed()) this.dailyRunActive = false;
+    // Every run is an ordinary run unless `startDailyRun` says otherwise
+    // immediately afterwards — including "again" from a Daily's results.
+    this.dailyRunActive = false;
     const id = this.profile.equipped;
     const guardian = getGuardian(id);
     const owned = this.profile.owned(id);
