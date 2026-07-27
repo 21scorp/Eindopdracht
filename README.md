@@ -26,7 +26,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 303 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
+| `npm test` | 305 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run resilience` | Boot the build in seven deliberately broken browsers |
@@ -316,7 +316,7 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **303 unit tests** across gacha guarantees, combat mechanics, the Resonance
+- **305 unit tests** across gacha guarantees, combat mechanics, the Resonance
   draft, the wallet and save migration, daily objectives, clip capture
   decisions, the texture contract, and the engine primitives. The gacha suite
   asserts every published guarantee, including the 50/50 and its make-good; the
@@ -397,7 +397,14 @@ that fills as you close on it.
 
 The token is deliberately tiny and unsigned. It is a party trick, not a
 leaderboard — anyone can hand-craft one, which costs nothing because there is no
-ranking to corrupt. Decoding clamps every field rather than trusting it.
+ranking to corrupt.
+
+What *is* taken seriously is that this is the one input a stranger controls end
+to end, and often the first thing a new player ever loads. Decoding clamps or
+resolves every field rather than trusting it: a token naming a Guardian that
+does not exist used to throw during boot and leave a blank screen, which is the
+worst possible outcome for the one feature whose whole job is being opened by
+somebody who has never played.
 
 The game is also installable: web manifest, service worker, offline play, and a
 generated icon set. Navigations are network-first so a deploy reaches players;

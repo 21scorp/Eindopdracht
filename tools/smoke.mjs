@@ -431,6 +431,30 @@ try {
 
   // --- challenge link -------------------------------------------------------
   // The viral loop: a link reproduces the challenger's exact wave sequence.
+  // A link is the one input a stranger controls end to end, and often the first
+  // thing a new player ever loads. A token naming a Guardian that does not exist
+  // used to throw during boot and leave a blank screen.
+  log('following a hostile challenge link');
+  {
+    const hostile = btoa('1|x|9999999|999|not-a-guardian|HACKER')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+    const rogue = await context.newPage();
+    const rogueErrors = [];
+    rogue.on('pageerror', (err) => rogueErrors.push(err.message));
+    await rogue.goto(`${BASE}?c=${hostile}`, { waitUntil: 'networkidle' });
+    await rogue.waitForTimeout(1600);
+    const state = await rogue.evaluate(() => ({
+      booted: !!window.aegis,
+      screen: window.aegis?.screens?.currentName,
+    }));
+    console.log('  hostile link:', JSON.stringify(state), rogueErrors.slice(0, 1));
+    if (!state.booted) throw new Error('a hand-crafted challenge link stopped the game from booting');
+    if (rogueErrors.length > 0) throw new Error(`hostile link threw: ${rogueErrors[0]}`);
+    await rogue.close();
+  }
+
   log('following a challenge link');
   const token = await page.evaluate(() => {
     const stats = window.aegis.lastRun?.stats;

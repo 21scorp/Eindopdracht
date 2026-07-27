@@ -296,7 +296,8 @@ describe('storage primitives', () => {
       // Which is the tab the player is actually using: it is the one that
       // earns something first.
       const key = `test.tabs.${Math.random()}`;
-      const a = makeStore(key);
+      // Two tabs loaded from the same (absent) record; only one plays.
+      makeStore(key);
       const b = makeStore(key);
 
       b.update((d) => (d.n = 2));
@@ -325,7 +326,9 @@ describe('storage primitives', () => {
     it('lets the owning tab go on saving', () => {
       const key = `test.tabs.${Math.random()}`;
       let conflicts = 0;
-      const a = makeStore(key);
+      // A second store exists and simply never writes, which is the common
+      // case: a tab left open on the menu.
+      makeStore(key);
       const b = makeStore(key, () => conflicts++);
 
       for (let i = 1; i <= 4; i++) {
@@ -335,7 +338,6 @@ describe('storage primitives', () => {
       expect(conflicts).toBe(0);
       expect(b.isStale).toBe(false);
       expect(makeStore(key).data.n).toBe(4);
-      void a;
     });
 
     it('reports the conflict exactly once, however many writes follow', () => {

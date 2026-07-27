@@ -29,6 +29,7 @@ import {
 import { Rng, seedFromString } from '../src/core/Rng';
 import { EventBus } from '../src/core/EventBus';
 import { alpha, hexToRgb, mix, rgbToHex, hsl, RARITY_STYLE, RARITIES } from '../src/render/palette';
+import { getGuardian } from '../src/data/guardians';
 import {
   decodeChallenge,
   encodeChallenge,
@@ -339,6 +340,21 @@ describe('challenge links', () => {
     expect(decodeChallenge('not-base64!!')).toBeNull();
     expect(decodeChallenge(btoa('999|seed|1|1|vane|X'))).toBeNull();
     expect(decodeChallenge(btoa('1|seed'))).toBeNull();
+  });
+
+  it('never hands on a Guardian that does not exist', () => {
+    // This one crashed the app during boot and left a blank screen, which is
+    // the worst possible outcome for the one feature whose whole job is being
+    // opened by somebody who has never played.
+    const decoded = decodeChallenge(encodeChallenge({ ...sample, guardianId: 'not-a-guardian' }));
+    expect(decoded).not.toBeNull();
+    expect(() => getGuardian(decoded!.guardianId)).not.toThrow();
+  });
+
+  it('clamps an absurd seed rather than carrying it around', () => {
+    const decoded = decodeChallenge(encodeChallenge({ ...sample, seed: 'x'.repeat(5000) }));
+    expect(decoded!.seed.length).toBeLessThanOrEqual(96);
+    expect(decoded!.seed.length).toBeGreaterThan(0);
   });
 
   it('clamps a hostile payload instead of trusting it', () => {

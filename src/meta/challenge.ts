@@ -14,9 +14,23 @@
  * nothing because there is no ranking to corrupt. If a real leaderboard is ever
  * added, scores have to be produced and validated server-side; nothing here
  * should be trusted for that.
+ *
+ * What *is* taken seriously is that this is the one input a stranger controls
+ * end to end, and often the first thing a new player ever loads. Every field is
+ * clamped or resolved on the way in.
  */
 
+import { GUARDIAN_BY_ID, STARTER_GUARDIAN_ID } from '../data/guardians';
+
 const VERSION = 1;
+/** A seed is a short opaque string; anything longer is somebody testing us. */
+const MAX_SEED_LENGTH = 96;
+
+/** Fall back to the starter rather than throwing on an id we do not have. */
+function knownGuardian(id: string): string {
+  return GUARDIAN_BY_ID.has(id) ? id : STARTER_GUARDIAN_ID;
+}
+
 const PARAM = 'c';
 
 export interface Challenge {
@@ -76,10 +90,16 @@ export function decodeChallenge(token: string): Challenge | null {
     const parsedWave = Number(wave);
     if (!Number.isFinite(parsedScore) || !Number.isFinite(parsedWave)) return null;
     return {
-      seed,
+      // Every field is clamped rather than trusted. A challenge link is the one
+      // input a stranger controls end to end, and it is also the first thing a
+      // new player ever loads — a token naming a Guardian that does not exist
+      // threw during boot and left a blank screen, which is the worst possible
+      // outcome for the one feature whose entire job is being opened by someone
+      // who has never played.
+      seed: seed.slice(0, MAX_SEED_LENGTH),
       score: Math.max(0, Math.round(parsedScore)),
       wave: Math.max(1, Math.round(parsedWave)),
-      guardianId,
+      guardianId: knownGuardian(guardianId),
       name: (name || 'GUARDIAN').slice(0, 14),
     };
   } catch {
