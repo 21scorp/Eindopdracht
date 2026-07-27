@@ -208,6 +208,42 @@ describe('save handling', () => {
     expect(p.balance('cores')).toBe(before);
   });
 
+  it('repairs a save whose sub-objects are the wrong shape entirely', () => {
+    // `mergeDefaults` takes arrays from the save wholesale, so a record whose
+    // `stats` is an array survives the merge intact and every later read of it
+    // is undefined — not a crash, which is worse: a save that silently behaves
+    // like a different save. Seen in the wild as a half-synced record.
+    const key = `test.shape.${Math.random()}`;
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        __v: 1,
+        __savedAt: Date.now(),
+        data: { stats: [], settings: 7, daily: null, roster: null, ledger: 'nope', seenTips: 3 },
+      }),
+    );
+    const p = new Profile(key);
+    expect(typeof p.data.stats.runs).toBe('number');
+    expect(typeof p.data.settings.music).toBe('number');
+    expect(typeof p.data.daily.date).toBe('string');
+    expect(Array.isArray(p.data.ledger)).toBe(true);
+    expect(Array.isArray(p.data.seenTips)).toBe(true);
+    expect(p.owns(p.equipped)).toBe(true);
+  });
+
+  it('keeps the fields a partial save did set', () => {
+    const key = `test.partial.${Math.random()}`;
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({ __v: 1, __savedAt: Date.now(), data: { stats: { bestScore: 4242 }, settings: { music: 0.1 } } }),
+    );
+    const p = new Profile(key);
+    expect(p.data.stats.bestScore).toBe(4242);
+    expect(p.data.stats.runs).toBe(0);
+    expect(p.data.settings.music).toBe(0.1);
+    expect(typeof p.data.settings.sfx).toBe('number');
+  });
+
   it('repairs a save that references a Guardian that no longer exists', () => {
     const key = `test.repair.${Math.random()}`;
     window.localStorage.setItem(

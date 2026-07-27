@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "balance": "vite-node tools/balance.ts",
     "smoke": "vite build && vite preview --port 4173 --host 127.0.0.1 & sleep 3 && node tools/smoke.mjs",
+    "resilience": "vite build && vite preview --port 4173 --host 127.0.0.1 & sleep 3 && node tools/resilience.mjs",
     "atlas:manifest": "vite-node tools/manifest.ts"
   },
   "devDependencies": {

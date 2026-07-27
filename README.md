@@ -25,9 +25,10 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 269 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
+| `npm test` | 273 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
+| `npm run resilience` | Boot the build in seven deliberately broken browsers |
 | `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
 | `npm run typecheck` | `tsc --noEmit` |
 
@@ -289,7 +290,7 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **269 unit tests** across gacha guarantees, combat mechanics, the Resonance
+- **273 unit tests** across gacha guarantees, combat mechanics, the Resonance
   draft, the wallet and save migration, daily objectives, clip capture
   decisions, the texture contract, and the engine primitives. The gacha suite
   asserts every published guarantee, including the 50/50 and its make-good; the
@@ -312,6 +313,12 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
   challenger's seed. Fails on any console error.
 - **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
   monitor and fails on content wider than the viewport.
+- **`node tools/resilience.mjs`** boots the build in browsers that are broken the
+  way real players' browsers are broken — localStorage throwing on every call,
+  a corrupt save, a save from a newer build, a save whose fields are the wrong
+  type entirely, no `AudioContext`, no `MediaRecorder`, no `captureStream` — and
+  fails unless the game still starts and still plays. Losing a feature is fine;
+  losing the game is not.
 - **`npm run balance`** drafts as it plays, so its numbers describe the game as
   it is actually played rather than a version nobody sees.
 

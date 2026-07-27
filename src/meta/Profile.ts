@@ -151,8 +151,26 @@ function daysBetween(a: string, b: string): number {
   return Math.round((pb - pa) / 86_400_000);
 }
 
+/**
+ * Does this device ask for less motion?
+ *
+ * Only consulted when a save is first created, so it seeds the defaults rather
+ * than overriding a choice the player has made. The DOM already honours the
+ * setting through CSS; the canvas — which is where the screen shake, the
+ * full-screen flashes and the chromatic split live — did not, and that is the
+ * part the setting is actually about.
+ */
+function prefersReducedMotion(): boolean {
+  try {
+    return typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  } catch {
+    return false;
+  }
+}
+
 function makeDefaults(): ProfileData {
   const now = Date.now();
+  const calm = prefersReducedMotion();
   const playerId = `p_${Math.random().toString(36).slice(2, 10)}${now.toString(36)}`;
   const pity: Record<string, PityState> = {};
   for (const b of BANNERS) pity[b.id] = createPityState();
@@ -205,8 +223,8 @@ function makeDefaults(): ProfileData {
       sfx: 0.8,
       haptics: true,
       quality: 'auto',
-      screenShake: 1,
-      reducedFlash: false,
+      screenShake: calm ? 0.25 : 1,
+      reducedFlash: calm,
       leftHanded: false,
       showFps: false,
       clips: true,
@@ -242,6 +260,24 @@ export class Profile {
 
   /** Clamp and backfill anything a partial save or a bad edit could break. */
   private repair(d: ProfileData): ProfileData {
+    // Sub-objects first. `mergeDefaults` takes arrays from the save wholesale,
+    // so a record whose `stats` is an array — or whose `settings` is a number —
+    // arrives here intact and every later read of it is undefined. That is not
+    // a crash, which is worse: it is a save that silently behaves like a
+    // different save.
+    const fresh = makeDefaults();
+    for (const key of ['stats', 'daily', 'settings', 'roster', 'pity', 'purchases', 'entitlements'] as const) {
+      const value = d[key] as unknown;
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        (d as unknown as Record<string, unknown>)[key] = fresh[key];
+      }
+    }
+    if (!Array.isArray(d.ledger)) d.ledger = [];
+    if (!Array.isArray(d.seenTips)) d.seenTips = [];
+    d.stats = { ...fresh.stats, ...d.stats };
+    d.settings = { ...fresh.settings, ...d.settings };
+    d.daily = { ...fresh.daily, ...d.daily };
+
     d.cores = Math.max(0, Math.floor(d.cores || 0));
     d.prisms = Math.max(0, Math.floor(d.prisms || 0));
     d.shards = Math.max(0, Math.floor(d.shards || 0));
