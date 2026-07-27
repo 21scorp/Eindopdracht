@@ -73,6 +73,7 @@ jobs:
           node tools/viewports.mjs
           node tools/a11y.mjs
           node tools/resilience.mjs
+          node tools/offline.mjs
 
       - uses: actions/upload-artifact@v4
         if: always()

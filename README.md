@@ -41,6 +41,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
 | `node tools/soak.mjs 180` | Play for three minutes and watch for leaks |
 | `node tools/a11y.mjs` | Names, targets, contrast and focus on every screen |
+| `node tools/offline.mjs` | Register, cache, cut the network, and play anyway |
 | `node tools/icons.mjs` | Regenerate the app icons |
 
 No backend. No accounts. Save data lives in `localStorage` and can be exported
@@ -419,7 +420,17 @@ somebody who has never played.
 
 The game is also installable: web manifest, service worker, offline play, and a
 generated icon set. Navigations are network-first so a deploy reaches players;
-hashed assets are cache-first because the URL is immutable.
+hashed assets are cache-first because the URL is immutable, and the worker reads
+the shell at install time to precache whatever bundles the current build
+references — it does not control the page on the visit that registers it, so
+without that the first visit cached nothing worth having.
+
+`node tools/offline.mjs` cuts the network and plays anyway, because "works
+offline" is exactly the kind of promise that quietly stops being true. It has
+already caught two separate reasons it was not: the worker was never registered
+at all, because the registration was attached to a `load` event that had already
+fired by the time boot finished, and every cache lookup missed because entries
+added by URL carry a different `Accept` header than the page's own requests.
 
 ---
 

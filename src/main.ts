@@ -140,11 +140,19 @@ async function main(): Promise<void> {
  */
 function registerServiceWorker(): void {
   if (!('serviceWorker' in navigator) || import.meta.env.DEV) return;
-  window.addEventListener('load', () => {
+
+  const register = (): void => {
     navigator.serviceWorker.register('sw.js', { scope: './' }).catch((err) => {
       console.info('[PWA] service worker not registered', err);
     });
-  });
+  };
+
+  // `boot()` awaits the atlas probe and the font load, so by the time this runs
+  // the `load` event has usually already fired — and a listener added after the
+  // event never runs. Offline play was silently off for exactly that reason:
+  // the worker was never registered at all.
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register, { once: true });
 }
 
 void main();
