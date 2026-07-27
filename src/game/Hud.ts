@@ -362,7 +362,12 @@ export class Hud {
     const r = view.minSide * 0.032;
     const x = this.mirrored ? pad + r : view.width - pad - r;
     const y = top + r + view.minSide * 0.09;
-    this.hit.pause = { x, y, r: r * 1.4 };
+    // The drawn circle is small on purpose — pause is a corner affordance, not
+    // a control anybody should be aiming at during a wave. What presses it is
+    // still a thumb, and a thumb is 44px wide no matter how small the phone is.
+    // Grow the target, not the glyph: on a 320px screen `r * 1.4` was a 29px
+    // target on the one button you reach for while panicking.
+    this.hit.pause = { x, y, r: Math.max(22, r * 1.4) };
 
     ctx.save();
     ctx.translate(x, y);

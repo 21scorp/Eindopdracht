@@ -43,6 +43,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | --- | --- |
 | `node tools/viewports.mjs` | Every screen at six sizes, failing on any overflow |
 | `node tools/layout.mjs` | Every screen at three widths, then again under a rich account, failing on anything that clips or overlaps |
+| `node tools/hud.mjs` | The in-run HUD at its widest state, on the shapes with the least room |
 | `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
 | `node tools/soak.mjs 180` | Play for three minutes and watch for leaks |
 | `node tools/a11y.mjs` | Names, targets, contrast and focus on every screen |
@@ -379,6 +380,14 @@ where they were.
   four-digit combo, six Resonance cards, a ten-pull of Mythics, a name nobody
   would pick. Those are only reachable by playing, which is precisely why nobody
   looks at them at 320px, or sideways.
+- **`node tools/hud.mjs`** checks the one surface the DOM sweep cannot see. The
+  HUD is drawn on the canvas, it is on screen for the entire time anybody
+  actually plays, and it is laid out against the state a run *starts* in — zero
+  score, no combo, no cards — which is the opposite of the state it spends its
+  life in. It puts a run into its widest state on the three tightest shapes and
+  fails if a thumb target leaves the screen, overlaps another one, overlaps the
+  ring you are defending, or is smaller than a thumb. Pause was a 29px target on
+  a 320px phone: the one button you reach for while panicking.
 - **`node tools/soak.mjs [seconds]`** plays continuously for several minutes —
   through escalation, boss fights, drafts, deaths and restarts — sampling heap,
   texture cache, live entities and frame rate, and fails on a leak or on a game
