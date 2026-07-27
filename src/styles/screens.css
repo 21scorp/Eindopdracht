@@ -148,6 +148,18 @@
   gap: 4px;
   align-items: flex-start;
   flex: 1;
+  /* Without this the column refuses to go narrower than the name it holds, so
+     on a 320px header the chip's `overflow: hidden` amputates the last few
+     letters at a hard vertical edge. */
+  min-width: 0;
+}
+
+/* A long name should trail off, not get guillotined. */
+.levelchip__meta .t-label {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .levelchip__meta .meter {

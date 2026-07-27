@@ -42,6 +42,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | Command | What it does |
 | --- | --- |
 | `node tools/viewports.mjs` | Every screen at six sizes, failing on any overflow |
+| `node tools/layout.mjs` | Every screen at three widths, failing on anything that clips its own text |
 | `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
 | `node tools/soak.mjs 180` | Play for three minutes and watch for leaks |
 | `node tools/a11y.mjs` | Names, targets, contrast and focus on every screen |
@@ -360,6 +361,14 @@ where they were.
 - **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
   monitor and fails on content wider than the viewport — and resizes the window
   mid-run to check nothing in flight is stranded inside the shield by it.
+- **`node tools/layout.mjs`** checks the other half of that: not content wider
+  than the window, but content *cut off by its own container*. `overflow:
+  hidden` sets a flex item's automatic minimum size to zero, so a panel inside a
+  scrolling column is the one child flex is willing to squash — and it squashes
+  by slicing a line of text in half instead of by scrolling. The rates screen
+  was shipping exactly that: the entire "what this costs in practice" panel, the
+  most load-bearing honesty on the screen, was rendering as one clipped headline
+  with its bottom half missing.
 - **`node tools/soak.mjs [seconds]`** plays continuously for several minutes —
   through escalation, boss fights, drafts, deaths and restarts — sampling heap,
   texture cache, live entities and frame rate, and fails on a leak or on a game
@@ -470,8 +479,8 @@ sprite art itself.
 
 Everything the game claims about itself is checked by something that runs: the
 published gacha rates by the test suite, the balance by a headless harness that
-plays hundreds of runs, the layout at six screen sizes, offline play by cutting
-the network, accessibility on every screen, and the whole thing booting in seven
-deliberately broken browsers. That is the point of the tooling in `tools/` — a
+plays hundreds of runs, the layout at six screen sizes and every panel against
+its own contents, offline play by cutting the network, accessibility on every
+screen, and the whole thing booting in seven deliberately broken browsers. That is the point of the tooling in `tools/` — a
 promise nobody verifies is a promise that quietly stops being true, and several
 of these had already stopped.

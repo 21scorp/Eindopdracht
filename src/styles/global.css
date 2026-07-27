@@ -264,6 +264,12 @@ body {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
   overflow: hidden;
+  /* `overflow: hidden` sets a flex item's automatic minimum size to zero, so a
+     panel is the one child a scrolling column is willing to squash — and it
+     squashes by cutting its own text in half rather than by scrolling. A panel
+     is a box drawn around content; it is never the thing that gives. `.grow`
+     comes later in this file and still wins where shrinking is deliberate. */
+  flex-shrink: 0;
 }
 
 /* The top highlight that sells the "glass pane" read. */
