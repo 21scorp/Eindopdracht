@@ -369,6 +369,42 @@ try {
   await page.waitForTimeout(1100);
   await shot('07b-pull-settled');
 
+  // Leaving a cinematic by any route other than its own completion callback used
+  // to leave the Summon buttons disabled for the rest of the session: the
+  // cinematic only ticks in `cinema` mode, so an abandoned one never completes
+  // and never releases the screen that started it.
+  await page.evaluate(() => {
+    window.aegis.screens.closeAll();
+    window.aegis.screens.push('banner');
+  });
+  await page.waitForTimeout(500);
+  await page.evaluate(() => {
+    window.aegis.profile.credit('prisms', 2000, 'smoke');
+    const btn = [...document.querySelectorAll('.banner__actions button')].find((b) =>
+      /^SUMMON X1(?!0)/i.test((b.textContent ?? '').trim()),
+    );
+    btn?.click();
+  });
+  await page.waitForTimeout(700);
+  await page.evaluate(() => window.aegis.showMenu('home'));
+  await page.waitForTimeout(500);
+  await page.evaluate(() => window.aegis.screens.push('banner'));
+  await page.waitForTimeout(500);
+  const abandoned = await page.evaluate(() => ({
+    cinematic: !!window.aegis.cinematic,
+    mode: window.aegis.mode,
+    stuck: [...document.querySelectorAll('.banner__actions button')].filter((b) => b.disabled).length,
+  }));
+  console.log('  abandoned cinematic:', JSON.stringify(abandoned));
+  if (abandoned.cinematic) throw new Error('an abandoned cinematic was left running');
+  if (abandoned.stuck > 0) throw new Error('the Summon buttons were left disabled after an abandoned cinematic');
+
+  await page.evaluate(() => {
+    window.aegis.screens.closeAll();
+    window.aegis.screens.push('pullresult');
+  });
+  await page.waitForTimeout(300);
+
   const afterPull = await page.evaluate(() => ({
     screen: window.aegis.screens.currentName,
     owned: window.aegis.profile.ownedIds().length,

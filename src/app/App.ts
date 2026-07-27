@@ -405,6 +405,11 @@ export class App {
 
   /** Enter the menu mode: the arena idles as a live background. */
   showMenu(screen = 'home'): void {
+    // A cinematic left running would never complete — only `cinema` mode ticks
+    // it — and its completion callback is what releases the screen that started
+    // it. Leaving one hanging is how the Summon buttons end up disabled for the
+    // rest of the session.
+    if (this.cinematic) this.endCinematic();
     this.mode = 'menu';
     this.audio.music.setIntensity(0.1);
     this.input.suppressed = true;

@@ -68,6 +68,11 @@ export class BannerScreen extends Screen {
   }
 
   protected override onEnter(): void {
+    // Arriving here means no pull is in flight: the cinematic closes every
+    // screen while it runs. Without this a cinematic that ended by any route
+    // other than its own completion callback leaves the buttons disabled for
+    // the rest of the session.
+    this.pulling = false;
     this.refresh();
   }
 
