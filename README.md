@@ -259,7 +259,7 @@ Current shape:
 | Skill | Median wave | Median run | Met a Warden |
 | --- | --- | --- | --- |
 | novice | 10 | 70s | 96% |
-| average | 17 | 121s | 100% |
+| average | 16 | 121s | 100% |
 | expert | 23 | 172s | 100% |
 
 An average run earns ~665 Cores, which is a summon every three runs and a
@@ -360,6 +360,12 @@ where they were.
   texture cache, live entities and frame rate, and fails on a leak or on a game
   where runs cannot end. Thirty seconds of smoke test cannot prove the game
   survives an evening.
+- **`node tools/offline.mjs`** registers the worker the way a first visit does,
+  cuts the network, reloads and starts a run — because "works offline" is
+  exactly the kind of promise that quietly stops being true.
+- **`node tools/a11y.mjs`** walks every screen and fails on a control with no
+  accessible name, a target too small for a thumb, text under the contrast
+  floor, or an element that takes focus and shows nothing.
 - **`node tools/resilience.mjs`** boots the build in browsers that are broken the
   way real players' browsers are broken — localStorage throwing on every call,
   a corrupt save, a save from a newer build, a save whose fields are the wrong
