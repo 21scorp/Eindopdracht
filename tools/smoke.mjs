@@ -291,6 +291,39 @@ try {
   if (!dailyClaimed) throw new Error('the daily reward did not open after the first run');
   await page.waitForTimeout(900);
 
+  // --- the daily run --------------------------------------------------------
+  // The shared seed has to be exactly that: the same for everyone, recorded as
+  // a best-of-day, and rewarded once.
+  log('playing the daily run');
+  const dailyBefore = await page.evaluate(() => ({
+    cores: window.aegis.profile.balance('cores'),
+    plays: window.aegis.profile.dailyRun.plays,
+  }));
+  await page.evaluate(() => window.aegis.startDailyRun());
+  await page.waitForTimeout(1200);
+  const dailySeed = await page.evaluate(() => ({
+    seed: window.aegis.session.seed,
+    expected: `aegis-daily-${new Date().toISOString().slice(0, 10)}`,
+    active: window.aegis.dailyRunActive,
+  }));
+  console.log('  daily seed:', JSON.stringify(dailySeed));
+  if (!dailySeed.active) throw new Error('the daily run did not mark itself active');
+  if (!dailySeed.seed.startsWith('aegis-daily-')) throw new Error(`daily seed was "${dailySeed.seed}"`);
+
+  await page.evaluate(() => window.aegis.session.end());
+  await page.waitForTimeout(900);
+  const dailyAfter = await page.evaluate(() => ({
+    plays: window.aegis.profile.dailyRun.plays,
+    best: window.aegis.profile.dailyRun.best,
+    cores: window.aegis.profile.balance('cores'),
+    badge: document.querySelector('.results__badge')?.textContent ?? '',
+  }));
+  console.log('  daily result:', JSON.stringify(dailyAfter));
+  if (dailyAfter.plays !== dailyBefore.plays + 1) throw new Error('the daily attempt was not recorded');
+  if (dailyAfter.cores <= dailyBefore.cores) throw new Error('the first daily run of the day paid nothing');
+  if (!/DAILY #/.test(dailyAfter.badge)) throw new Error(`results headline was "${dailyAfter.badge}"`);
+  await shot('04d-daily-run.png'.replace('.png', ''));
+
   // --- summon ---------------------------------------------------------------
   log('opening summon');
   await page.evaluate(() => window.aegis.showMenu('home'));

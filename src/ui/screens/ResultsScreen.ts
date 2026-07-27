@@ -17,6 +17,7 @@ import type { QuestView } from '../../meta/quests';
 import type { RunStats } from '../../game/events';
 import { clipFileName, type ClipResult } from '../../meta/ClipRecorder';
 import { getResonance } from '../../data/resonance';
+import { dailyRunShareText } from '../../meta/dailyRun';
 import { Screen } from '../Screen';
 import { statRow, textureImg } from '../components';
 import { button, clear, fmt, fmtTime, h } from '../dom';
@@ -33,6 +34,7 @@ export class ResultsScreen extends Screen {
   private stats: RunStats | null = null;
   private rewards: RunRewards | null = null;
   private challenge: ChallengeResult | null = null;
+  private daily: DailyResult | null = null;
   private questsCompleted: QuestView[] = [];
   private clipBox!: HTMLElement;
   private buildBox!: HTMLElement;
@@ -76,12 +78,19 @@ export class ResultsScreen extends Screen {
 
   protected override onEnter(params?: unknown): void {
     const p = params as
-      | { stats: RunStats; rewards: RunRewards; challenge?: ChallengeResult | null; questsCompleted?: QuestView[] }
+      | {
+          stats: RunStats;
+          rewards: RunRewards;
+          challenge?: ChallengeResult | null;
+          questsCompleted?: QuestView[];
+          daily?: DailyResult | null;
+        }
       | undefined;
     if (!p) return;
     this.stats = p.stats;
     this.rewards = p.rewards;
     this.challenge = p.challenge ?? null;
+    this.daily = p.daily ?? null;
     this.questsCompleted = p.questsCompleted ?? [];
     this.targetScore = p.stats.score;
     this.shownScore = 0;
@@ -167,7 +176,11 @@ export class ResultsScreen extends Screen {
       name: this.app.profile.data.playerName,
       guardianId: stats.guardianId,
     });
-    const text = `${fmt(stats.score)} on AEGIS — wave ${stats.wave}, ${stats.maxCombo} combo. Same waves, your turn: ${url}`;
+    // A Daily result is a different sentence: the day number is what makes two
+    // scores comparable, and without it the clip is just somebody's run.
+    const text = this.daily
+      ? dailyRunShareText({ score: stats.score, wave: stats.wave, plays: this.daily.plays, url })
+      : `${fmt(stats.score)} on AEGIS — wave ${stats.wave}, ${stats.maxCombo} combo. Same waves, your turn: ${url}`;
 
     try {
       const file = new File([clip.blob], name, { type: clip.blob.type });
@@ -232,6 +245,22 @@ export class ResultsScreen extends Screen {
           text: beaten
             ? `by ${fmt(this.challenge.margin)}`
             : `${fmt(this.challenge.margin)} short of ${fmt(this.challenge.challenge.score)}`,
+        }),
+      );
+    } else if (this.daily) {
+      // The Daily is the frame the run was played in, so it is the frame the
+      // result is reported in — with today's best, because that is the number
+      // that travels.
+      this.headline.append(
+        h('span', {
+          class: `results__badge${this.daily.improved ? ' results__badge--best' : ''}`,
+          text: `DAILY #${this.daily.number}`,
+        }),
+        h('span', {
+          class: 'results__margin t-label',
+          text: this.daily.improved
+            ? `new best today · ${this.daily.plays === 1 ? 'first try' : `${this.daily.plays} tries`}`
+            : `best today ${fmt(this.daily.best)} · ${this.daily.plays} tries`,
         }),
       );
     } else if (rewards.personalBest) {
@@ -391,4 +420,13 @@ function rewardChip(texture: string, amount: number, label: string, isXp = false
     h('span', { class: 'rewardchip__amount t-num', text: `+${fmt(amount)}` }),
     h('span', { class: 'rewardchip__label t-label', text: label }),
   );
+}
+
+/** What the app hands over when the finished run was today's shared seed. */
+export interface DailyResult {
+  number: number;
+  best: number;
+  plays: number;
+  improved: boolean;
+  rewarded: boolean;
 }

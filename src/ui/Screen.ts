@@ -126,7 +126,7 @@ export class ScreenStack {
     if (top) this.screens.get(top)?.hide();
     // Always re-show, even when the screen underneath stayed visible behind a
     // translucent overlay. Returning to a screen has to refresh it: claiming a
-    // daily reward and closing the sheet must not leave "DAILY READY" sitting
+    // daily reward and closing the sheet must not leave "REWARD READY" sitting
     // on the home screen.
     this.current?.show();
   }

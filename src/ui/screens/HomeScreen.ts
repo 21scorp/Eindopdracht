@@ -9,6 +9,7 @@
 
 import { RARITY_STYLE } from '../../render/palette';
 import { getGuardian, scaleStats } from '../../data/guardians';
+import { dailyRunNumber } from '../../meta/dailyRun';
 import type { App } from '../../app/App';
 import { Screen } from '../Screen';
 import { NavBar, Wallet, meter, rarityChip, stars, statRow, textureImg } from '../components';
@@ -22,6 +23,7 @@ export class HomeScreen extends Screen {
   private levelChip!: HTMLElement;
   private dailyBtn!: HTMLElement;
   private questBtn!: HTMLElement;
+  private dailyRunBtn!: HTMLElement;
   /** Only auto-open the daily reward once per session, however often we return. */
   private dailyShown = false;
 
@@ -63,6 +65,10 @@ export class HomeScreen extends Screen {
 
     const play = button('HOLD THE LINE', () => this.app.startRun(), { variant: 'hero', class: 'home__play' });
 
+    // The shared seed, right under the ordinary run: it is a second reason to
+    // start rather than a mode to go looking for.
+    this.dailyRunBtn = h('button', { class: 'dailyrun', type: 'button', onClick: () => this.app.startDailyRun() });
+
     this.dailyBtn = h('button', {
       class: 'dailybtn',
       type: 'button',
@@ -93,7 +99,13 @@ export class HomeScreen extends Screen {
     this.root.append(
       header,
       h('div', { class: 'home__body grow' }, this.hero, this.statsRow),
-      h('div', { class: 'home__actions' }, h('div', { class: 'home__chores' }, this.dailyBtn, this.questBtn), play),
+      h(
+        'div',
+        { class: 'home__actions' },
+        h('div', { class: 'home__chores' }, this.dailyBtn, this.questBtn),
+        play,
+        this.dailyRunBtn,
+      ),
       this.nav.root,
     );
   }
@@ -231,11 +243,31 @@ export class HomeScreen extends Screen {
       h(
         'span',
         { class: 'col', style: { gap: '0' } },
-        h('span', { class: 'dailybtn__title', text: available ? 'DAILY READY' : 'DAILY CLAIMED' }),
+        // "Daily reward" and "Daily Run" are different things, and two chips
+        // both starting with DAILY read as one feature shown twice.
+        h('span', { class: 'dailybtn__title', text: available ? 'REWARD READY' : 'REWARD CLAIMED' }),
         h('span', { class: 't-label', text: `Day ${profile.dailyDay} of 7` }),
       ),
     );
-    void fmt;
+    // --- the shared seed ---
+    const run = profile.dailyRun;
+    clear(this.dailyRunBtn);
+    this.dailyRunBtn.classList.toggle('is-fresh', run.plays === 0);
+    this.dailyRunBtn.append(
+      h(
+        'span',
+        { class: 'col', style: { gap: '1px' } },
+        h('span', { class: 'dailyrun__title', text: `DAILY RUN #${dailyRunNumber(run.date)}` }),
+        h('span', {
+          class: 't-label',
+          text:
+            run.plays === 0
+              ? 'Same waves for everyone today'
+              : `Your best today: ${fmt(run.best)} · wave ${run.wave}`,
+        }),
+      ),
+      h('span', { class: 'dailyrun__go', text: run.plays === 0 ? 'PLAY' : 'AGAIN' }),
+    );
   }
 
   override onBack(): boolean {

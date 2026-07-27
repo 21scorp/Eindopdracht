@@ -18,6 +18,7 @@ import { getGuardian } from '../data/guardians';
 import type { RunStats } from '../game/events';
 import type { App } from '../app/App';
 import { challengeUrl } from './challenge';
+import { dailyRunShareText } from './dailyRun';
 import { getResonance, type ResonanceDef } from '../data/resonance';
 
 const CARD_W = 1080;
@@ -29,6 +30,8 @@ export interface ShareCardOptions {
   bestScore: number;
   /** Shown at the bottom so a viewer knows where to go. */
   callToAction?: string;
+  /** Set when this was the shared Daily seed, so the ribbon can say which day. */
+  dailyNumber?: number;
 }
 
 export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
@@ -231,8 +234,11 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
   ctx.fillText(`${opts.playerName.toUpperCase()}   ·   ${cta}`, CARD_W / 2, CARD_H - 46);
   ctx.letterSpacing = '0px';
 
-  // Personal-best flourish.
-  if (stats.score >= opts.bestScore && stats.score > 0) {
+  // Personal-best flourish, or the day number when this was the shared seed —
+  // the ribbon is the first thing read, so it should say what the run *was*.
+  if (opts.dailyNumber) {
+    drawRibbon(ctx, CARD_W / 2, 236, `DAILY #${opts.dailyNumber}`, style.color);
+  } else if (stats.score >= opts.bestScore && stats.score > 0) {
     drawRibbon(ctx, CARD_W / 2, 236, 'PERSONAL BEST', style.color);
   }
 
@@ -264,6 +270,7 @@ export async function shareRun(app: App, stats: RunStats): Promise<'share' | 'cl
     stats,
     playerName: app.profile.data.playerName,
     bestScore: app.profile.data.stats.bestScore,
+    dailyNumber: app.lastDaily?.number,
   });
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
@@ -281,7 +288,12 @@ export async function shareRun(app: App, stats: RunStats): Promise<'share' | 'cl
     name: app.profile.data.playerName,
     guardianId: stats.guardianId,
   });
-  const text = `${stats.score.toLocaleString('en-US')} on AEGIS — wave ${stats.wave}, ${stats.maxCombo} combo. Same waves, your turn: ${url}`;
+  // The Daily gets its own sentence: the day number is the thing that makes two
+  // scores comparable, and a Daily result shared without it is just a score.
+  const daily = app.lastDaily;
+  const text = daily
+    ? dailyRunShareText({ score: stats.score, wave: stats.wave, plays: daily.plays, url })
+    : `${stats.score.toLocaleString('en-US')} on AEGIS — wave ${stats.wave}, ${stats.maxCombo} combo. Same waves, your turn: ${url}`;
 
   const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
   if (nav.share && nav.canShare?.({ files: [file] })) {

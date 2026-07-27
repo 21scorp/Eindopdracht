@@ -32,6 +32,7 @@ import { Profile } from '../meta/Profile';
 import { QuestTracker, type QuestView } from '../meta/quests';
 import { ClipRecorder, shouldArm, type ClipResult } from '../meta/ClipRecorder';
 import { RESONANCE_BY_ID } from '../data/resonance';
+import { dailyRunNumber, dailyRunSeed } from '../meta/dailyRun';
 import { clearChallengeFromUrl, evaluateChallenge, readChallengeFromUrl, type Challenge } from '../meta/challenge';
 import { ScreenStack } from '../ui/Screen';
 import { audio } from '../audio/AudioEngine';
@@ -83,6 +84,11 @@ export class App {
 
   /** Idle-arena state so the menu background stays alive. */
   private menuTime = 0;
+
+  /** True while the current run is today's shared-seed Daily Run. */
+  dailyRunActive = false;
+  /** Set when the finished run was a Daily Run, for the results screen. */
+  lastDaily: { number: number; best: number; plays: number; improved: boolean; rewarded: boolean } | null = null;
 
   /** A challenge read from the URL, waiting to be accepted. */
   pendingChallenge: Challenge | null = null;
@@ -401,6 +407,20 @@ export class App {
     this.screens.replace(screen);
   }
 
+  /**
+   * Today's shared seed.
+   *
+   * Not a separate mode: the same run with a fixed seed, so everything that
+   * works in a normal run — the draft, the clip, the share card — works here
+   * without a second code path to keep in step.
+   */
+  startDailyRun(): void {
+    this.activeChallenge = null;
+    this.pendingChallenge = null;
+    this.dailyRunActive = true;
+    this.startRun(dailyRunSeed());
+  }
+
   /** Replay a challenger's exact wave sequence. */
   startChallengeRun(challenge: Challenge): void {
     this.activeChallenge = challenge;
@@ -414,6 +434,9 @@ export class App {
   }
 
   startRun(seedOverride?: string): void {
+    // Any run that was not started through `startDailyRun` is an ordinary run,
+    // including "again" from the results of a Daily.
+    if (seedOverride !== dailyRunSeed()) this.dailyRunActive = false;
     const id = this.profile.equipped;
     const guardian = getGuardian(id);
     const owned = this.profile.owned(id);
@@ -512,6 +535,20 @@ export class App {
     // Quests read the finished run's own stats rather than subscribing to
     // events, so a system that re-emits one cannot double-count progress.
     this.lastQuestsCompleted = this.quests.recordRun(stats);
+
+    if (this.dailyRunActive) {
+      const { improved, rewarded } = this.profile.recordDailyRun({ score: stats.score, wave: stats.wave });
+      const record = this.profile.dailyRun;
+      this.lastDaily = {
+        number: dailyRunNumber(record.date),
+        best: record.best,
+        plays: record.plays,
+        improved,
+        rewarded,
+      };
+    } else {
+      this.lastDaily = null;
+    }
     this.lastChallengeResult = this.activeChallenge
       ? { challenge: this.activeChallenge, ...evaluateChallenge(this.activeChallenge, stats.score) }
       : null;
@@ -523,6 +560,7 @@ export class App {
       rewards: this.lastRunRewards,
       challenge: this.lastChallengeResult,
       questsCompleted: this.lastQuestsCompleted,
+      daily: this.lastDaily,
     });
   }
 

@@ -22,6 +22,13 @@ import { BANNERS } from '../data/banners';
 import { MAX_LEVEL, MAX_STARS, STARTER_GUARDIAN_ID, getGuardian, levelUpCost, starUpCost } from '../data/guardians';
 import type { Quality } from '../render/Renderer';
 import { createPityState, type PityState } from './gacha';
+import {
+  DAILY_RUN_REWARD,
+  makeDailyRunState,
+  recordDailyRun,
+  rollDailyRun,
+  type DailyRunState,
+} from './dailyRun';
 
 export type CurrencyId = 'cores' | 'prisms' | 'shards';
 
@@ -117,6 +124,9 @@ export interface ProfileData {
   ledger: LedgerEntry[];
   /** Ids of one-time tips the player has already dismissed. */
   seenTips: string[];
+
+  /** Today's Daily Run record: the seed everyone shares. */
+  dailyRun: DailyRunState;
 
   /** Local date the active quest set was rolled for. */
   questDate: string;
@@ -229,6 +239,7 @@ function makeDefaults(): ProfileData {
       showFps: false,
       clips: true,
     },
+    dailyRun: makeDailyRunState(),
     purchases: {},
     entitlements: {},
     ledger: [],
@@ -266,7 +277,7 @@ export class Profile {
     // a crash, which is worse: it is a save that silently behaves like a
     // different save.
     const fresh = makeDefaults();
-    for (const key of ['stats', 'daily', 'settings', 'roster', 'pity', 'purchases', 'entitlements'] as const) {
+    for (const key of ['stats', 'daily', 'dailyRun', 'settings', 'roster', 'pity', 'purchases', 'entitlements'] as const) {
       const value = d[key] as unknown;
       if (!value || typeof value !== 'object' || Array.isArray(value)) {
         (d as unknown as Record<string, unknown>)[key] = fresh[key];
@@ -277,6 +288,7 @@ export class Profile {
     d.stats = { ...fresh.stats, ...d.stats };
     d.settings = { ...fresh.settings, ...d.settings };
     d.daily = { ...fresh.daily, ...d.daily };
+    d.dailyRun = { ...fresh.dailyRun, ...d.dailyRun };
 
     d.cores = Math.max(0, Math.floor(d.cores || 0));
     d.prisms = Math.max(0, Math.floor(d.prisms || 0));
@@ -564,6 +576,39 @@ export class Profile {
     this.data.daily.streak = gap === 1 ? this.data.daily.streak + 1 : 1;
     this.data.daily.lastPlayedDate = today;
     this.events.emit('streak', { streak: this.data.daily.streak });
+  }
+
+  // --------------------------------------------------------------- daily run
+
+  /** Today's record on the shared seed, rolled over if the date has turned. */
+  get dailyRun(): DailyRunState {
+    const rolled = rollDailyRun(this.data.dailyRun);
+    if (rolled !== this.data.dailyRun) {
+      this.data.dailyRun = rolled;
+      this.touch();
+    }
+    return this.data.dailyRun;
+  }
+
+  /**
+   * Fold a finished Daily Run in and pay the once-a-day reward.
+   *
+   * The reward is paid on the first attempt of the day rather than on a good
+   * one: it is for turning up, and gating it on performance would make the
+   * shared seed feel like a test rather than an invitation.
+   */
+  recordDailyRun(result: { score: number; wave: number }): { improved: boolean; rewarded: boolean } {
+    const { state, improved, firstToday } = recordDailyRun(this.dailyRun, result);
+    this.data.dailyRun = state;
+    let rewarded = false;
+    if (firstToday && !state.rewarded) {
+      state.rewarded = true;
+      rewarded = true;
+      this.credit('cores', DAILY_RUN_REWARD.cores, 'dailyRun');
+      this.credit('prisms', DAILY_RUN_REWARD.prisms, 'dailyRun');
+    }
+    this.touch();
+    return { improved, rewarded };
   }
 
   /** True when today's daily reward has not been collected yet. */

@@ -26,7 +26,7 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 273 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
+| `npm test` | 290 unit tests (gacha, combat, draft, economy, quests, clips, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
 | `npm run resilience` | Boot the build in seven deliberately broken browsers |
@@ -39,6 +39,7 @@ Review tooling, all writing screenshots into `tools/shots/`:
 | --- | --- |
 | `node tools/viewports.mjs` | Every screen at six sizes, failing on any overflow |
 | `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
+| `node tools/soak.mjs 180` | Play for three minutes and watch for leaks |
 | `node tools/icons.mjs` | Regenerate the app icons |
 
 No backend. No accounts. Save data lives in `localStorage` and can be exported
@@ -105,6 +106,22 @@ your shield to do it.
 The whole thing is a pure fold. A run's modifiers are recomputed from the list
 of cards taken, never applied incrementally, so a card can never land twice and
 the run's entire state is reproducible from that list.
+
+### The Daily Run
+
+One seed, the same for everyone, changing at local midnight. The wave director
+was already deterministic, so this cost almost nothing to build and changes the
+conversation entirely: a score out of context is a number, and a score on *the
+waves everyone else played today* is an argument.
+
+It is deliberately not a leaderboard. No server, no accounts, no ranking to
+defend — a numbered day, your best on it, and share text built so two people can
+compare in a reply: `AEGIS Daily #208 — wave 14, 84,233 (3 tries).`
+
+Replaying is allowed, and that is a decision rather than an oversight. Locking
+the day after one attempt punishes the player who wants to improve, which is
+exactly the player worth keeping. The number that travels is your best of the
+day, and the attempt count travels with it so nobody is pretending otherwise.
 
 ### Coming back
 
@@ -291,7 +308,7 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **273 unit tests** across gacha guarantees, combat mechanics, the Resonance
+- **290 unit tests** across gacha guarantees, combat mechanics, the Resonance
   draft, the wallet and save migration, daily objectives, clip capture
   decisions, the texture contract, and the engine primitives. The gacha suite
   asserts every published guarantee, including the 50/50 and its make-good; the
@@ -314,6 +331,11 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
   challenger's seed. Fails on any console error.
 - **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
   monitor and fails on content wider than the viewport.
+- **`node tools/soak.mjs [seconds]`** plays continuously for several minutes —
+  through escalation, boss fights, drafts, deaths and restarts — sampling heap,
+  texture cache, live entities and frame rate, and fails on a leak or on a game
+  where runs cannot end. Thirty seconds of smoke test cannot prove the game
+  survives an evening.
 - **`node tools/resilience.mjs`** boots the build in browsers that are broken the
   way real players' browsers are broken — localStorage throwing on every call,
   a corrupt save, a save from a newer build, a save whose fields are the wrong
@@ -385,8 +407,9 @@ Any static host works the same way: `npx vite build` and serve `dist/`.
 ## Status
 
 Complete and playable end to end: gameplay, progression, collection, summoning,
-shop, daily loop, objectives, the in-run draft, coaching, challenge links, share
-card, highlight clips, audio, settings, save transfer and offline install.
+shop, daily loop, daily run, objectives, the in-run draft, coaching, challenge
+links, share card, highlight clips, audio, settings, save transfer and offline
+install.
 
 Not built yet, and deliberately: a backend, leaderboards, real payments, and the
 sprite art itself.

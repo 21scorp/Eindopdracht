@@ -2570,3 +2570,66 @@
   color: var(--text-dim);
   text-wrap: balance;
 }
+
+/* ------------------------------------------------------------- daily run */
+
+/*
+ * Sits directly under HOLD THE LINE. It is a second reason to start a run, not
+ * a mode buried behind navigation — and it is quieter than the main button
+ * because a player who has never touched it should still press the big one.
+ */
+.dailyrun {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: rgba(11, 16, 32, 0.72);
+  color: var(--text-dim);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 180ms var(--ease-out),
+    background 180ms var(--ease-out);
+}
+
+/* Accent, not parry yellow: the login reward chip beside it is already yellow,
+   and two yellow "daily" things read as one feature drawn twice. */
+.dailyrun.is-fresh {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, rgba(11, 16, 32, 0.72));
+}
+
+.dailyrun__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--text);
+}
+
+.dailyrun.is-fresh .dailyrun__title {
+  color: var(--accent);
+}
+
+.dailyrun__go {
+  margin-left: auto;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
+.dailyrun .col {
+  min-width: 0;
+}
+
+.dailyrun .t-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
