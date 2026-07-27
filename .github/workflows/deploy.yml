@@ -46,11 +46,14 @@ jobs:
       - name: Build
         run: npx vite build
 
-      # `enablement: true` lets the action turn Pages on itself the first time,
-      # using the `pages: write` permission this job already has. Without it the
-      # very first deploy of a repository fails on "Get Pages site failed" and
-      # waits on somebody finding the right settings page — a one-time manual
-      # step is still a step that blocks the deploy.
+      # `enablement: true` asks the action to create the Pages site if it does
+      # not exist yet. Worth setting, but it is not a substitute for the one-time
+      # setup: creating a Pages site needs admin on the repository, and the
+      # workflow's `GITHUB_TOKEN` tops out at `pages: write` — enough to deploy
+      # to a site that exists, not to bring one into being. A first-time repo
+      # fails here with "Resource not accessible by integration" until an owner
+      # has visited Settings → Pages → Source → GitHub Actions once. After that
+      # this flag makes the step a no-op and every later deploy is hands-off.
       - uses: actions/configure-pages@v5
         with:
           enablement: true
