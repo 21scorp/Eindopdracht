@@ -87,6 +87,7 @@ export class GameRenderer {
 
     this.drawBackground(session);
     this.particles.draw(renderer, true);
+    this.drawEdgeWarnings(session);
     this.drawThreatTrails(session);
     this.drawThreats(session);
     this.drawNexus(session);
@@ -194,6 +195,99 @@ export class GameRenderer {
 
   // ---------------------------------------------------------------- threats
 
+  /**
+   * Chevrons on the screen edge marking where an off-screen threat will enter.
+   *
+   * A threat spawns on a rectangle just beyond the viewport, so on a narrow
+   * phone one arriving from the side is hidden for roughly half its approach
+   * while one arriving from above is visible for most of it. Same travel time,
+   * very different warning — and at high waves, where the whole approach is
+   * about a second, that difference decides runs.
+   *
+   * The marker fades in as the threat nears the edge and hands off to the
+   * threat itself the moment it becomes visible, so nothing arrives unannounced
+   * regardless of the angle it came from.
+   */
+  private drawEdgeWarnings(session: GameSession): void {
+    const { ctx, view } = this.renderer;
+    const arena = session.arena;
+    // Far enough in that the marker never gets clipped by the viewport edge.
+    const inset = Math.max(18, view.minSide * 0.042);
+    const halfW = view.width / 2 - inset;
+    const halfH = view.height / 2 - inset;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (const t of session.pool.live) {
+      if (!t.active || t.state !== 'incoming' || t.delay > 0) continue;
+
+      const dx = t.x - arena.cx;
+      const dy = t.y - arena.cy;
+      // Only threats still outside the visible area need announcing.
+      const outside = Math.abs(dx) > halfW || Math.abs(dy) > halfH;
+      if (!outside) continue;
+
+      // Where the ray from the nexus through the threat crosses the inset rect.
+      const scale = Math.min(
+        Math.abs(dx) > 1e-3 ? halfW / Math.abs(dx) : Number.POSITIVE_INFINITY,
+        Math.abs(dy) > 1e-3 ? halfH / Math.abs(dy) : Number.POSITIVE_INFINITY,
+      );
+      if (!Number.isFinite(scale)) continue;
+      const ex = arena.cx + dx * scale;
+      const ey = arena.cy + dy * scale;
+
+      // Present from the moment it exists, brightening and pulsing faster as it
+      // nears the edge. A marker that only appears at the last instant is not a
+      // warning, it is a jump scare.
+      const dist = Math.hypot(dx, dy);
+      const edgeDist = Math.hypot(dx * scale, dy * scale);
+      const lead = Math.max(1, arena.edgeRadius(t.angle) - edgeDist);
+      const approach = clamp01(1 - (dist - edgeDist) / lead);
+      const pulse = 0.72 + 0.28 * Math.sin(this.time * (4 + approach * 10));
+      const a = (0.28 + 0.72 * approach) * pulse * 0.95;
+
+      const col = threatColor(t);
+      const size = view.minSide * (0.019 + approach * 0.011);
+      const facing = Math.atan2(-dy, -dx); // pointing inward
+
+      ctx.save();
+      ctx.translate(ex, ey);
+      ctx.rotate(facing);
+      ctx.globalAlpha = a;
+
+      // A short tail on the outside reads as "coming from over there".
+      const tail = ctx.createLinearGradient(-size * 2.4, 0, -size * 0.4, 0);
+      tail.addColorStop(0, alpha(col, 0));
+      tail.addColorStop(1, alpha(col, 0.55));
+      ctx.fillStyle = tail;
+      ctx.fillRect(-size * 2.4, -size * 0.14, size * 2, size * 0.28);
+
+      ctx.fillStyle = lighten(col, 0.25);
+      ctx.beginPath();
+      ctx.moveTo(size * 1.0, 0);
+      ctx.lineTo(-size * 0.45, -size * 0.66);
+      ctx.lineTo(-size * 0.12, 0);
+      ctx.lineTo(-size * 0.45, size * 0.66);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      this.renderer.glowOnly((c) => {
+        c.save();
+        c.globalCompositeOperation = 'lighter';
+        this.textures.draw(c, 'fx/glow', ex, ey, {
+          width: size * 5,
+          height: size * 5,
+          tint: col,
+          alpha: a * 0.6,
+        });
+        c.restore();
+      }, 0.8);
+    }
+    ctx.restore();
+  }
+
   private drawThreatTrails(session: GameSession): void {
     const { ctx } = this.renderer;
     const arena = session.arena;
@@ -208,11 +302,15 @@ export class GameRenderer {
       const tx = t.x + Math.cos(dir) * len;
       const ty = t.y + Math.sin(dir) * len;
 
+      // The trail must stay subordinate to the silhouette. At full width it
+      // merges with the sprite and every archetype reads as the same capsule,
+      // which defeats the point of giving them different shapes.
       const g = ctx.createLinearGradient(t.x, t.y, tx, ty);
-      g.addColorStop(0, alpha(col, t.state === 'deflected' ? 0.75 : 0.4));
+      g.addColorStop(0, alpha(col, t.state === 'deflected' ? 0.7 : 0.34));
+      g.addColorStop(0.35, alpha(col, t.state === 'deflected' ? 0.3 : 0.14));
       g.addColorStop(1, alpha(col, 0));
       ctx.strokeStyle = g;
-      ctx.lineWidth = t.size * (t.state === 'deflected' ? 1.5 : 1.1) * t.scale;
+      ctx.lineWidth = t.size * (t.state === 'deflected' ? 1.15 : 0.66) * t.scale;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(t.x, t.y);

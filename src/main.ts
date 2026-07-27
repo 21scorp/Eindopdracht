@@ -23,6 +23,12 @@ import { PullResultScreen } from './ui/screens/PullResultScreen';
 import { DailyScreen } from './ui/screens/DailyScreen';
 import { HowToPlayScreen } from './ui/screens/HowToPlayScreen';
 import { ChallengeScreen } from './ui/screens/ChallengeScreen';
+import { THREATS } from './data/threats';
+import { GUARDIANS } from './data/guardians';
+import { BANNERS } from './data/banners';
+
+/** Read-only game data, exposed for debugging and the screenshot tooling. */
+const AEGIS_DATA = { THREATS, GUARDIANS, BANNERS } as const;
 
 function fail(message: string, err?: unknown): never {
   console.error(message, err);
@@ -96,8 +102,10 @@ async function main(): Promise<void> {
   // from "someone sent me this" to "I am playing" is one tap.
   app.showMenu(app.pendingChallenge ? 'challenge' : 'home');
 
-  // Expose for debugging without shipping a dev overlay.
-  (window as unknown as { aegis: App }).aegis = app;
+  // Expose for debugging and for the capture tooling, without shipping a dev
+  // overlay into the UI.
+  (window as unknown as { aegis: App; aegisData: typeof AEGIS_DATA }).aegis = app;
+  (window as unknown as { aegisData: typeof AEGIS_DATA }).aegisData = AEGIS_DATA;
 
   registerServiceWorker();
 }

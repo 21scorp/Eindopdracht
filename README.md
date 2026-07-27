@@ -9,6 +9,12 @@ you block is wasted — it becomes the shot that kills the next one.
 Runs last one to two minutes. Then you spend what you earned on the thing the
 game is really about: pulling for Guardians.
 
+<p align="center">
+  <img src="docs/media/arena.png" alt="The arena mid-wave: a shield arc around the nexus, threats converging from every angle" width="270" />
+  <img src="docs/media/overdrive.png" alt="Overdrive: the whole arena turns gold at double score" width="270" />
+  <img src="docs/media/warden.png" alt="A Warden going down in a shower of shards" width="270" />
+</p>
+
 ```bash
 npm install
 npm run dev          # http://localhost:5173
@@ -19,10 +25,19 @@ npm run dev          # http://localhost:5173
 | `npm run dev` | Dev server with hot reload |
 | `npm run build` | Type-check, then production build into `dist/` |
 | `npm run preview` | Serve the production build |
-| `npm test` | 117 unit tests (gacha, combat, economy, engine) |
+| `npm test` | 134 unit tests (gacha, combat, economy, textures, engine) |
 | `npm run balance` | Headless balance simulation — see [Balance](#balance) |
 | `npm run smoke` | Build, serve, and drive the whole game in a real browser |
+| `npm run atlas:manifest` | Print the texture contract, or diff it against an atlas |
 | `npm run typecheck` | `tsc --noEmit` |
+
+Review tooling, all writing screenshots into `tools/shots/`:
+
+| Command | What it does |
+| --- | --- |
+| `node tools/viewports.mjs` | Every screen at six sizes, failing on any overflow |
+| `node tools/capture.mjs` | Set-pieces that are slow to reach by playing |
+| `node tools/icons.mjs` | Regenerate the app icons |
 
 No backend. No accounts. Save data lives in `localStorage` and can be exported
 as a code from Settings.
@@ -203,21 +218,42 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
 
 ## Testing
 
-- **117 unit tests** across gacha guarantees, combat mechanics, the wallet and
-  save migration, and the engine primitives. The gacha suite asserts every
-  published guarantee, including the 50/50 and its make-good.
+- **134 unit tests** across gacha guarantees, combat mechanics, the wallet and
+  save migration, the texture contract, and the engine primitives. The gacha
+  suite asserts every published guarantee, including the 50/50 and its make-good.
 - **`npm run balance`** for systemic behaviour over hundreds of runs.
 - **`npm run smoke`** drives a real Chromium at phone size: claims the daily
   reward, plays a run with an autopilot, performs a ten-pull, opens every
-  screen, renders the share card, and fails on any console error. Screenshots
-  land in `tools/shots/`.
+  screen, renders the share card, follows a challenge link and checks the run
+  uses the challenger's seed. Fails on any console error.
+- **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
+  monitor and fails on content wider than the viewport.
+
+---
+
+## Sharing
+
+A run is reproducible: the wave director is seeded, so the same seed produces
+the same waves in the same order. Sharing emits both a card and a **challenge
+link** carrying that seed and the score to beat. Opening the link lands on a
+challenge screen with one button, and the HUD then shows the target with a bar
+that fills as you close on it.
+
+The token is deliberately tiny and unsigned. It is a party trick, not a
+leaderboard — anyone can hand-craft one, which costs nothing because there is no
+ranking to corrupt. Decoding clamps every field rather than trusting it.
+
+The game is also installable: web manifest, service worker, offline play, and a
+generated icon set. Navigations are network-first so a deploy reaches players;
+hashed assets are cache-first because the URL is immutable.
 
 ---
 
 ## Status
 
 Complete and playable end to end: gameplay, progression, collection, summoning,
-shop, daily loop, coaching, share card, audio, settings and save transfer.
+shop, daily loop, coaching, challenge links, share card, audio, settings, save
+transfer and offline install.
 
 Not built yet, and deliberately: a backend, leaderboards, real payments, and the
 sprite art itself.
