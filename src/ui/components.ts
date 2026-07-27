@@ -26,6 +26,11 @@ const CURRENCY_META: Record<CurrencyId, { texture: string; label: string; title:
  * cards at once and took 95ms to open because of it — a visible hitch every
  * time. The bytes for a given key never change (a texture is generated once and
  * an atlas frame is immutable), so encode once and hand out the same string.
+ *
+ * This depends on one ordering invariant: `App.boot()` awaits the atlas load
+ * before any screen is shown, and screens build lazily on first show. Load an
+ * atlas after a screen has been built and these cached URLs would show the
+ * procedural art forever.
  */
 const dataUrls = new Map<string, string>();
 
