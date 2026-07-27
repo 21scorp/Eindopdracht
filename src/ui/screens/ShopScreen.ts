@@ -59,12 +59,18 @@ export class ShopScreen extends Screen {
     // --- exchange -----------------------------------------------------------
     this.body.append(sectionTitle('Exchange'));
     const exchangeGrid = h('div', { class: 'shop__grid' });
+    // The best rate on offer, so the others can be compared against it rather
+    // than left as two numbers the player has to divide in their head.
+    const bestRate = Math.max(...EXCHANGES.map((e) => e.prisms / e.cores));
+    const held = this.app.profile.balance('cores');
+
     for (const ex of EXCHANGES) {
       const affordable = this.app.profile.canAfford('cores', ex.cores);
+      const advantage = Math.round((ex.prisms / ex.cores / bestRate) * 100);
       exchangeGrid.appendChild(
         h(
           'div',
-          { class: 'shopcard panel' },
+          { class: 'shopcard shopcard--exchange panel' },
           h(
             'div',
             { class: 'shopcard__head' },
@@ -75,9 +81,16 @@ export class ShopScreen extends Screen {
               h('span', { class: 'shopcard__name', text: `${fmt(ex.prisms)} Prisms` }),
               h('span', { class: 't-label', text: ex.label }),
             ),
+            advantage >= 100
+              ? h('span', { class: 'shopcard__rate', text: 'BEST RATE' })
+              : h('span', { class: 'shopcard__rate shopcard__rate--dim', text: `${advantage}% of best` }),
           ),
           button(`${fmt(ex.cores)} CORES`, () => this.exchange(ex.cores, ex.prisms), {
             variant: affordable ? 'primary' : 'ghost',
+            // A greyed-out button with no explanation reads as broken. Say what
+            // is missing, so the disabled state is information rather than a
+            // dead end.
+            sub: affordable ? undefined : `${fmt(ex.cores - held)} more needed`,
             disabled: !affordable,
           }),
         ),
@@ -140,7 +153,19 @@ export class ShopScreen extends Screen {
       h('ul', { class: 'shopcard__contents' }, ...describeGrant(grant).map((line) => h('li', { text: line }))),
     );
 
-    if (first) card.appendChild(h('span', { class: 'shopcard__first', text: 'First purchase: contents doubled' }));
+    if (first) {
+      // Spell the doubling out against the base contents. The card otherwise
+      // shows one number in the blurb and a different one in the list, and the
+      // player is left to work out which one they are buying.
+      const base = describeGrant(product.grant).join(' + ');
+      const boosted = describeGrant(grant).join(' + ');
+      card.appendChild(
+        h('span', {
+          class: 'shopcard__first',
+          text: base === boosted ? 'First purchase: contents doubled' : `First purchase: ${base} → ${boosted}`,
+        }),
+      );
+    }
     if (product.bonusPercent) {
       card.appendChild(h('span', { class: 'shopcard__bonus', text: `+${product.bonusPercent}% value` }));
     }

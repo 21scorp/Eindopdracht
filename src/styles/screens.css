@@ -448,7 +448,8 @@
 /* ------------------------------------------------------------------ roster */
 
 .roster__summary {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 16px;
   padding: 12px 14px;
@@ -2529,4 +2530,35 @@
   color: var(--text);
   margin: 0;
   text-wrap: pretty;
+}
+
+/* Exchange rate chip: the comparison the player would otherwise do in their head. */
+.shopcard__rate {
+  margin-left: auto;
+  align-self: flex-start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--heal);
+  border: 1px solid color-mix(in srgb, var(--heal) 45%, transparent);
+  background: color-mix(in srgb, var(--heal) 12%, transparent);
+  white-space: nowrap;
+}
+
+.shopcard__rate--dim {
+  color: var(--text-faint);
+  border-color: var(--line-soft);
+  background: transparent;
+}
+
+/* The collection toggle, sitting with the count it talks about. */
+.roster__missing {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  margin-top: 2px;
+  text-align: center;
+  color: var(--text-dim);
 }

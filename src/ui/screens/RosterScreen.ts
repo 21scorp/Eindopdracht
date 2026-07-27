@@ -56,18 +56,6 @@ export class RosterScreen extends Screen {
         }),
       );
     }
-    this.filters.appendChild(
-      h('button', {
-        class: 'chipbtn chipbtn--toggle',
-        type: 'button',
-        text: 'Missing',
-        data: { toggle: 'unowned' },
-        onClick: () => {
-          this.showUnowned = !this.showUnowned;
-          this.refresh();
-        },
-      }),
-    );
 
     this.root.append(
       topBar({ title: 'Roster', onBack: () => this.app.screens.pop(), wallet: this.wallet }),
@@ -87,7 +75,6 @@ export class RosterScreen extends Screen {
 
     for (const el of Array.from(this.filters.children) as HTMLElement[]) {
       if (el.dataset.sort) el.classList.toggle('is-active', el.dataset.sort === this.sort);
-      if (el.dataset.toggle) el.classList.toggle('is-active', this.showUnowned);
     }
 
     // Collection summary.
@@ -101,6 +88,20 @@ export class RosterScreen extends Screen {
         h('span', { class: 't-label', text: `of ${GUARDIANS.length} collected` }),
       ),
       h('div', { class: 'roster__bars' }, ...RARITIES.map((r) => this.rarityBar(r))),
+      // The "show what I do not have" toggle belongs next to the collection
+      // count, not at the end of a scrolling row of *sort* options where it was
+      // both semantically out of place and usually off the edge of a phone.
+      h('button', {
+        // No active state: the label already says which way it goes, and a
+        // solid fill on a secondary control shouts over the collection meter.
+        class: 'chipbtn roster__missing',
+        type: 'button',
+        text: this.showUnowned ? `Hide the ${GUARDIANS.length - ownedCount} missing` : `Show the ${GUARDIANS.length - ownedCount} missing`,
+        onClick: () => {
+          this.showUnowned = !this.showUnowned;
+          this.refresh();
+        },
+      }),
     );
 
     // Cards.
