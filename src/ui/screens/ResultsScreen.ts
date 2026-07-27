@@ -94,6 +94,10 @@ export class ResultsScreen extends Screen {
     this.questsCompleted = p.questsCompleted ?? [];
     this.targetScore = p.stats.score;
     this.shownScore = 0;
+    // Paint it now rather than waiting for the count-up: a zero-score run never
+    // animates, so the element would still be showing the *previous* run's
+    // score — which is the one number on this screen nobody should misread.
+    this.scoreEl.textContent = fmt(0);
     this.visit++;
     this.render();
     void this.attachClip(this.visit);

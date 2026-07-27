@@ -310,7 +310,13 @@ try {
   if (!dailySeed.active) throw new Error('the daily run did not mark itself active');
   if (!dailySeed.seed.startsWith('aegis-daily-')) throw new Error(`daily seed was "${dailySeed.seed}"`);
 
-  await page.evaluate(() => window.aegis.session.end());
+  // Score it directly rather than trying to play well: what is under test is
+  // that a finished Daily reaches the record, is rewarded once, and is
+  // reported as the day — not whether an autopilot can hold a line.
+  await page.evaluate(() => {
+    window.aegis.session.score = 42_000;
+    window.aegis.session.end();
+  });
   await page.waitForTimeout(900);
   const dailyAfter = await page.evaluate(() => ({
     plays: window.aegis.profile.dailyRun.plays,
@@ -320,6 +326,7 @@ try {
   }));
   console.log('  daily result:', JSON.stringify(dailyAfter));
   if (dailyAfter.plays !== dailyBefore.plays + 1) throw new Error('the daily attempt was not recorded');
+  if (dailyAfter.best <= 0) throw new Error('the daily run recorded no score');
   if (dailyAfter.cores <= dailyBefore.cores) throw new Error('the first daily run of the day paid nothing');
   if (!/DAILY #/.test(dailyAfter.badge)) throw new Error(`results headline was "${dailyAfter.badge}"`);
   await shot('04d-daily-run.png'.replace('.png', ''));

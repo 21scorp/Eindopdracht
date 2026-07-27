@@ -2205,6 +2205,18 @@
   background: color-mix(in srgb, var(--threat) 12%, transparent);
 }
 
+/*
+ * The headline is a badge and, sometimes, a line qualifying it. Two inline
+ * elements ran off the right edge as soon as the qualifier got long — "DAILY
+ * #208" plus "best today 84,233 · 3 tries" does not fit a phone on one line.
+ */
+.results__headline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
 .results__margin {
   margin-top: 4px;
   letter-spacing: 0.16em;
