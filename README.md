@@ -297,9 +297,15 @@ which is a pull nobody wants to get.
 Screen shake, full-screen flashes and chromatic aberration are exactly the
 effects that make this game feel good and exactly the effects that make some
 people unable to play it, so they are the *first* settings, not the last:
-shake is a 0-100% slider, flashes and chromatic split can be reduced, the HUD
-mirrors for left-handed play, and `prefers-reduced-motion` is honoured
-throughout the UI.
+shake is a 0-100% slider, flashes and chromatic split can be reduced, and the
+HUD mirrors for left-handed play.
+
+`prefers-reduced-motion` is honoured on both sides of the canvas boundary: CSS
+stills the interface, and a new save seeds its shake and flash settings from the
+same preference. The DOM half was easy and the canvas half is the part the
+setting is actually about — the screen shake, the full-screen flashes and the
+chromatic split all live there. It seeds a default rather than overriding a
+choice, so a player who turns the shake back up keeps it.
 
 The whole game is playable with a keyboard: `A`/`D` or arrows to aim, `Space` to
 pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
@@ -322,11 +328,14 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
   file exists because `parryWindow` was printed on every Guardian card, scaled
   by level and stars, multiplied by a Resonance card, and read by no code at
   all.
-- **`npm run balance`** for systemic behaviour over hundreds of runs.
+- **`npm run balance`** for systemic behaviour over hundreds of runs, drafting
+  as it plays so its numbers describe the game as it is actually played rather
+  than a version nobody sees.
 - **`npm run smoke`** drives a real Chromium at phone size: claims the daily
   reward, plays a run with an autopilot, checks the pause menu actually freezes
   the world, drafts a Resonance, records a highlight clip and checks the encoder
-  actually produced a file, performs a ten-pull, opens every screen,
+  actually produced a file, plays the Daily Run and checks it is recorded and
+  rewarded, performs a ten-pull, opens every screen,
   renders the share card, follows a challenge link and checks the run uses the
   challenger's seed. Fails on any console error.
 - **`node tools/viewports.mjs`** opens every screen from a 320px phone to a 21:9
@@ -342,12 +351,14 @@ pulse, `Shift`/`Q` for the Ultimate, `Esc` to pause.
   type entirely, no `AudioContext`, no `MediaRecorder`, no `captureStream` — and
   fails unless the game still starts and still plays. Losing a feature is fine;
   losing the game is not.
-- **`npm run balance`** drafts as it plays, so its numbers describe the game as
-  it is actually played rather than a version nobody sees.
 
 ---
 
 ## Sharing
+
+Three things travel, and they are deliberately different shapes: a **clip** is
+what gets watched, a **challenge link** is what turns a viewer into a player,
+and the **Daily Run** is what makes two scores comparable in the first place.
 
 ### The highlight clip
 
