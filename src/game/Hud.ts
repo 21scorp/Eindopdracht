@@ -16,6 +16,7 @@ import { COLORS, alpha, lighten, mix } from '../render/palette';
 import type { Renderer } from '../render/Renderer';
 import type { TextureStore } from '../render/TextureStore';
 import type { GameSession } from './GameSession';
+import { getResonance } from '../data/resonance';
 import { FONT_STACK } from './Vfx';
 
 export interface HudHitAreas {
@@ -80,6 +81,7 @@ export class Hud {
     this.drawPulseMeter(session, view, pad, accent);
     this.drawUltimate(session, view, pad);
     this.drawPauseButton(view, pad, top);
+    this.drawResonance(session, pad, top + view.minSide * 0.115);
 
     ctx.restore();
   }
@@ -186,6 +188,41 @@ export class Hud {
       ctx.fillStyle = session.director.isBossWave ? COLORS.mythic : accent;
       roundRect(ctx, x, railY, Math.max(railH, railW * p), railH, railH / 2);
       ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // -------------------------------------------------------------- resonance
+
+  /**
+   * The cards this run is holding, as a column of sigils under the wave rail.
+   *
+   * Icons only. A player mid-wave has no attention for words, and the point of
+   * showing them at all is not to be read — it is so the build has a presence
+   * on screen, and so the next draft is a decision about something visible
+   * rather than about something remembered.
+   */
+  private drawResonance(session: GameSession, x: number, y: number): void {
+    const held = session.resonance;
+    if (held.length === 0) return;
+    const { ctx, view } = this.renderer;
+    const size = Math.max(14, view.minSide * 0.042);
+    const step = size * 1.12;
+
+    ctx.save();
+    ctx.globalAlpha = 0.82;
+    for (let i = 0; i < held.length; i++) {
+      const def = getResonance(held[i]!);
+      if (!def) continue;
+      // Wrap into a second column rather than running off the bottom of a
+      // short landscape viewport.
+      const perColumn = Math.max(3, Math.floor((view.height * 0.42) / step));
+      const col = Math.floor(i / perColumn);
+      const row = i % perColumn;
+      this.textures.draw(ctx, def.icon, x + size / 2 + col * step, y + size / 2 + row * step, {
+        width: size,
+        height: size,
+      });
     }
     ctx.restore();
   }

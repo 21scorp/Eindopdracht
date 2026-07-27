@@ -18,6 +18,7 @@ import { getGuardian } from '../data/guardians';
 import type { RunStats } from '../game/events';
 import type { App } from '../app/App';
 import { challengeUrl } from './challenge';
+import { getResonance, type ResonanceDef } from '../data/resonance';
 
 const CARD_W = 1080;
 const CARD_H = 1350;
@@ -167,6 +168,30 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
     }
   });
 
+  // --- the build ------------------------------------------------------------
+  // A score says how well it went. The build says *how*, and "how" is the part
+  // that starts an argument in the replies.
+  const held = (stats.resonance ?? []).map((id) => getResonance(id)).filter((r): r is ResonanceDef => !!r);
+  if (held.length > 0) {
+    const rowY = stripY + 140;
+    const icon = 46;
+    const gap = 22;
+    // Icons only, centred: names at this size would either wrap or shrink to
+    // something nobody reads on a phone-sized preview.
+    const shown = held.slice(0, 8);
+    const totalW = shown.length * icon + (shown.length - 1) * gap;
+    ctx.font = `600 19px ${FONT}`;
+    ctx.letterSpacing = '5px';
+    ctx.fillStyle = hexA('#5C6885', 1);
+    ctx.fillText('RESONANCE', CARD_W / 2, rowY - 46);
+    ctx.letterSpacing = '0px';
+    shown.forEach((r, i) => {
+      const tex = textures.get(r.icon);
+      const x = CARD_W / 2 - totalW / 2 + i * (icon + gap);
+      ctx.drawImage(tex.image, tex.sx, tex.sy, tex.sw, tex.sh, x, rowY - icon / 2, icon, icon);
+    });
+  }
+
   // --- guardian badge -------------------------------------------------------
   const badgeY = CARD_H - 258;
   const emblem = textures.get(`guardian/${g.id}/emblem`);
@@ -187,8 +212,9 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
   ctx.fillText(style.label.toUpperCase(), CARD_W / 2, badgeY + 142);
   ctx.letterSpacing = '0px';
 
-  // Rarity stars.
-  const starY = badgeY + 172;
+  // Rarity stars. Five of them at the old offset ran straight through the
+  // footer line, which only showed up once a Mythic was on the card.
+  const starY = badgeY + 174;
   const starTex = textures.get('ui/star');
   const ss = 26;
   const total = style.stars;
@@ -202,7 +228,7 @@ export function renderShareCard(opts: ShareCardOptions): HTMLCanvasElement {
   ctx.letterSpacing = '5px';
   ctx.fillStyle = hexA('#93A0BE', 0.95);
   const cta = opts.callToAction ?? 'SAME WAVES · YOUR TURN';
-  ctx.fillText(`${opts.playerName.toUpperCase()}   ·   ${cta}`, CARD_W / 2, CARD_H - 78);
+  ctx.fillText(`${opts.playerName.toUpperCase()}   ·   ${cta}`, CARD_W / 2, CARD_H - 46);
   ctx.letterSpacing = '0px';
 
   // Personal-best flourish.

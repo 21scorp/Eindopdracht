@@ -13,6 +13,7 @@ import { COLORS } from '../../render/palette';
 import { threatColor } from '../../game/GameRenderer';
 import type { App } from '../../app/App';
 import { Screen } from '../Screen';
+import { DRAFT_INTERVAL, RESONANCE } from '../../data/resonance';
 import { sectionTitle, textureImg, topBar } from '../components';
 import { clear, h } from '../dom';
 
@@ -73,6 +74,31 @@ export class HowToPlayScreen extends Screen {
         class: 't-body',
         text: `Every ${SCORING.multiplierStep} combo raises your multiplier by ${SCORING.multiplierGain}x, up to ${SCORING.multiplierMax}x. At ${SCORING.overdriveThreshold} combo you enter OVERDRIVE and everything scores double. Taking damage breaks the chain — in Overdrive you keep part of it.`,
       }),
+
+      sectionTitle('Resonance'),
+      h('p', {
+        class: 't-body',
+        text: `Every ${DRAFT_INTERVAL} waves the run pauses and offers three upgrades. Take one — you keep it for the rest of the run and lose it when the run ends. There is no skip, and there are no wrong answers, only different runs.`,
+      }),
+      h(
+        'div',
+        { class: 'howto__resonance' },
+        ...RESONANCE.filter((r) => r.tier !== 'common')
+          .slice(0, 4)
+          .map((r) =>
+            h(
+              'div',
+              { class: 'howto__threat' },
+              textureImg(r.icon, 42),
+              h(
+                'div',
+                { class: 'col', style: { gap: '2px' } },
+                h('span', { class: 'howto__threatname', text: r.name }),
+                h('span', { class: 't-body', text: r.text }),
+              ),
+            ),
+          ),
+      ),
 
       sectionTitle('What is coming for you'),
       h(

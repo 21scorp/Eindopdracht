@@ -446,6 +446,46 @@ export class GameAudio {
     haptics.tap(8);
   }
 
+  /**
+   * The draft opening: a rising three-note arpeggio over a soft swell.
+   *
+   * Deliberately unlike every other cue in the game — nothing else in a run
+   * plays a chord — so the sound alone says the wave is over and the next
+   * fifteen seconds belong to the player rather than to the director.
+   */
+  draftOpen(): void {
+    this.engine.noise({ duration: 0.55, filter: 300, filterTo: 4200, type: 'bandpass', gain: 0.05, send: 0.6 });
+    const notes = [0, 7, 12, 19];
+    notes.forEach((n, i) => {
+      this.engine.tone({
+        freq: midiToFreq(ROOT + 12 + n),
+        type: 'triangle',
+        attack: 0.006,
+        decay: 0.42,
+        gain: 0.075 - i * 0.008,
+        delay: i * 0.07,
+        send: 0.45,
+      });
+    });
+    this.engine.duck(0.4, 0.5);
+    haptics.tap(12);
+  }
+
+  /** Taking a card: the same chord, landed rather than rising. */
+  draftTaken(): void {
+    for (const n of [0, 12, 19, 24]) {
+      this.engine.tone({
+        freq: midiToFreq(ROOT + n),
+        type: 'sine',
+        attack: 0.003,
+        decay: 0.5,
+        gain: 0.06,
+        send: 0.4,
+      });
+    }
+    haptics.tap(16);
+  }
+
   uiBack(): void {
     this.blip(midiToFreq(ROOT + 5), 0.035, 0.06);
   }

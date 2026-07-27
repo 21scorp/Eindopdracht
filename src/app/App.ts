@@ -460,13 +460,14 @@ export class App {
     this.clips.pauseRecording();
     this.input.suppressed = true;
     this.audio.music.setIntensity(0.35);
+    this.audio.draftOpen();
     this.screens.push('resonance', { offer, wave });
   }
 
   /** Take a card and drop straight back into the run. */
   takeResonance(id: string): void {
     if (!this.session.takeResonance(id)) return;
-    this.audio.uiConfirm();
+    this.audio.draftTaken();
     this.screens.closeAll();
     this.paused = false;
     this.clips.resumeRecording();

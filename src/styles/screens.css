@@ -2035,7 +2035,8 @@
   font-size: 12px;
 }
 
-.howto__threats {
+.howto__threats,
+.howto__resonance {
   display: flex;
   flex-direction: column;
   gap: 8px;
